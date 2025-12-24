@@ -1,13 +1,15 @@
 const evaluations = [
   {
     id: 1,
+    slug: "tenshin",
     name: "那須川 天心",
-    from: "山中 慎介（元WBC世界王者）",
+    from: "山中 慎介",
     comment:
       "ボクシングでもすぐに世界王者になれるセンスがある。",
   },
   {
     id: 2,
+    slug: "fictional-person",
     name: "架空の人物",
     from: "恩師",
     comment:
@@ -15,14 +17,15 @@ const evaluations = [
   },
   {
     id: 3,
-    name: "うんち",
-    from: "おいおいわかるさ",
+    slug: "myself",
+    name: "あなた",
+    from: "過去の自分",
     comment:
       "あの時諦めなかった判断は、間違っていなかった。",
   },
 ];
 
-
+import Link from "next/link";
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#f6f4ee] flex items-center justify-center">
@@ -33,9 +36,9 @@ export default function Home() {
 
         <div className="mt-16 space-y-8">
           {evaluations.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-xl p-6 shadow-sm"
+            <Link key={item.id} 
+            href={`/evaluation/${item.slug}`}>
+            <div className="bg-white rounded-xl p-6 shadow-sm"
             >
               <p className="text-gray-700 leading-relaxed">
                 {item.comment}
@@ -49,6 +52,7 @@ export default function Home() {
                 （{item.name}）
               </div>
             </div>
+            </Link>
           ))}
         </div>
       </div>
