@@ -33,3 +33,13 @@ npm run dev
 ## 公開URL
 [Vercelで公開中](https://evaluation-room.vercel.app)
 
+## ディレクトリ構成（抜粋）
+
+app/
+├─ page.tsx        # トップページ
+├─ evaluation/     # 評価一覧・詳細ページ
+
+## 今後の展望
+
+- Markdownベースで評価を管理できる仕組みを導入予定
+- 管理者のみ評価を追加できる構成を検討中
