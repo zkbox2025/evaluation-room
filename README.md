@@ -29,3 +29,7 @@ npm run dev
 - シンプルで静かなデザインであること
 
 を大切にしています。
+
+## 公開URL
+[Vercelで公開中](https://evaluation-room.vercel.app)
+
