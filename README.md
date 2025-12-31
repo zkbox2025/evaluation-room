@@ -39,8 +39,34 @@ app/
 ├─ page.tsx        # トップページ
 ├─ evaluation/     # 評価一覧・詳細ページ
 
+
+## Markdown（評価データ）について
+
+本プロジェクトでは、評価データを Markdown ファイルとして管理しています。
+
+### Front Matter ルール
+
+各評価ファイル（`.md`）の先頭には以下の Front Matter を記述します。
+
+```yaml
+---
+title: "タイトル"
+name: "評価される人物名"
+from: "評価者"
+date: "YYYY-MM-DD"
+description: "一覧ページ用の短い説明"
+---
+
+
+## Slug ルール
+
+- Markdown ファイル名 = slug
+- 英小文字 + 数字 + ハイフンのみ使用
+- ドット（.）、日本語、スペースは禁止
+
+例：
+- inoue-naoya.md
+- mike-tyson.md
+
 ## 今後の展望
-
-- Markdownベースで評価を管理できる仕組みを導入予定
-- 管理者のみ評価を追加できる構成を検討中
-
+Markdownで遊ぶ（見出し・引用・リスト）
