@@ -8,6 +8,9 @@ const peopleDirectory = path.join(
   "contents/people"
 );
 
+/**
+ * 人物一覧を取得（トップページ用）
+ */
 export function getPersons(): Person[] {
   const dirNames = fs.readdirSync(peopleDirectory);
 
@@ -24,12 +27,15 @@ export function getPersons(): Person[] {
     return {
       slug,
       name: data.name,
-      genre: data.genre,
+      category: data.category,
       description: data.description,
     };
   });
 }
 
+/**
+ * 人物を1人取得（個別ページ用）
+ */
 export function getPerson(slug: string): Person | null {
   const fullPath = path.join(
     peopleDirectory,
@@ -37,7 +43,9 @@ export function getPerson(slug: string): Person | null {
     "index.md"
   );
 
-  if (!fs.existsSync(fullPath)) return null;
+  if (!fs.existsSync(fullPath)) {
+    return null;
+  }
 
   const fileContents = fs.readFileSync(fullPath, "utf8");
   const { data } = matter(fileContents);
@@ -45,7 +53,25 @@ export function getPerson(slug: string): Person | null {
   return {
     slug,
     name: data.name,
-    genre: data.genre,
+    category: data.category,
     description: data.description,
   };
+}
+
+/**
+ * 人物をカテゴリ（ジャンル）ごとにグループ化
+ */
+export function groupPeopleByCategory(
+  people: Person[]
+): Record<string, Person[]> {
+  return people.reduce((acc, person) => {
+    const category = person.category || "その他";
+
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+
+    acc[category].push(person);
+    return acc;
+  }, {} as Record<string, Person[]>);
 }

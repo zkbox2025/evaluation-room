@@ -1,6 +1,6 @@
 export type Person = {
   slug: string;
   name: string;
-  genre: string;
+  category: string;
   description: string;
 };

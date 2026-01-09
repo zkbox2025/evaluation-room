@@ -3,9 +3,9 @@ import path from "path";
 import matter from "gray-matter";
 import { remark } from "remark";
 import html from "remark-html";
-import { Evaluation } from "@/types/evaluation";
+import { Evaluation } from "@/types/evaluations";
 
-const evaluationsDirectory = path.join(
+const evaluationsRoot = path.join(
   process.cwd(),
   "contents/evaluations"
 );
@@ -13,7 +13,7 @@ const evaluationsDirectory = path.join(
 export async function getEvaluationsByPerson(
   slug: string
 ): Promise<Evaluation[]> {
-  const dir = path.join(evaluationsDirectory, slug);
+  const dir = path.join(evaluationsRoot, slug);
 
   if (!fs.existsSync(dir)) return [];
 
@@ -29,10 +29,16 @@ export async function getEvaluationsByPerson(
         .use(html)
         .process(content);
 
+      const date = data.date;
+
       return {
-        from: data.from,
-        date: data.date,
+        id: file.replace(/\.md$/, ""),
+        personSlug: slug,
         contentHtml: processed.toString(),
+        from: data.from ?? "不明",
+        date,
+        year: data.year ?? new Date(date).getFullYear(),
+        type: data.type ?? "quote",
       };
     })
   );
@@ -43,3 +49,6 @@ export async function getEvaluationsByPerson(
       new Date(a.date).getTime()
   );
 }
+
+
+
