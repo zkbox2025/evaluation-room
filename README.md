@@ -8,8 +8,11 @@
 - TypeScript
 - Tailwind CSS
 - Git / GitHub
+- Markdown CMS（Front Matter でデータ管理）
 
 ## 起動方法
+```bash
+npm install
 npm run dev
 
 ## スクリーンショット
@@ -36,8 +39,30 @@ npm run dev
 ## ディレクトリ構成（抜粋）
 
 app/
-├─ page.tsx        # トップページ
-├─ evaluation/     # 評価一覧・詳細ページ
+├─ page.tsx                   # トップページ
+├─ person/[slug]/page.tsx     # 人物ページ
+
+contents/
+├─ evaluations/
+|  ├─inoue-naoya 
+|   　├─mike-tyson.md          # 評価（1件）
+|　 　
+├─ people/
+   ├─inoue-naoya
+      ├─index.md.              # 人物プロフィール
+
+lib/
+├─ getEvaluationsByPersons.ts  # 人物ページ：評価一覧取得
+├─ getLatestEvaluation.ts      # トップページ：最新評価取得
+├─ getPerson.ts                # 人物取得/一覧取得/categoryでグループ化
+
+utils/
+├─ groupEvaluationsByYear.ts.  # 評価を年ごとにグループ化
+
+components/evaluation/
+├─EvaluationCard.tsx.          # 評価カード（１件）
+├─EvaluationList.tsx.          # 評価カードのリスト
+├─EvaluationTimeline.tsx.      # 年ごとのグルーピング表示
 
 
 ## Markdown（評価データ）について
@@ -50,13 +75,11 @@ app/
 
 ```yaml
 ---
-title: "タイトル"
-name: "評価される人物名"
 from: "評価者"
 date: "YYYY-MM-DD"
-description: "一覧ページ用の短い説明"
+year: YYYY
+type: "quote"
 ---
-
 
 ## Slug ルール
 
@@ -67,6 +90,3 @@ description: "一覧ページ用の短い説明"
 例：
 - inoue-naoya.md
 - mike-tyson.md
-
-## 今後の展望
-Markdownで遊ぶ（見出し・引用・リスト）
