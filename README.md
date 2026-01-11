@@ -1,14 +1,16 @@
-# 評価の部屋（Evaluation Room）
+# 評価の部屋
+（Evaluation Room）
 
 著名人に対するポジティブな評価を保存・閲覧するための Webサイトです。  
 
 ## 使用技術
 
-- Next.js (App Router)
-- TypeScript
-- Tailwind CSS
-- Git / GitHub
-- Markdown CMS（Front Matter でデータ管理）
+*   Next.js (App Router)
+*   TypeScript
+*   Tailwind CSS
+*   Git / GitHub
+*   Markdown CMS（Front Matter でデータ管理）
+
 
 ## 起動方法
 ```bash
@@ -49,7 +51,7 @@ contents/
 |　 　
 ├─ people/
    ├─inoue-naoya
-      ├─index.md.              # 人物プロフィール
+      ├─index.md              # 人物プロフィール
 
 lib/
 ├─ getEvaluationsByPersons.ts  # 人物ページ：評価一覧取得
@@ -57,12 +59,12 @@ lib/
 ├─ getPerson.ts                # 人物取得/一覧取得/categoryでグループ化
 
 utils/
-├─ groupEvaluationsByYear.ts.  # 評価を年ごとにグループ化
+├─ groupEvaluationsByYear.ts  # 評価を年ごとにグループ化
 
 components/evaluation/
-├─EvaluationCard.tsx.          # 評価カード（１件）
-├─EvaluationList.tsx.          # 評価カードのリスト
-├─EvaluationTimeline.tsx.      # 年ごとのグルーピング表示
+├─EvaluationCard.tsx           # 評価カード（１件）
+├─EvaluationList.tsx           # 評価カードのリスト
+├─EvaluationTimeline.tsx       # 年ごとのグルーピング表示
 
 
 ## Markdown（評価データ）について
@@ -77,7 +79,7 @@ components/evaluation/
 ---
 from: "評価者"
 date: "YYYY-MM-DD"
-year: YYYY
+year: 2026
 type: "quote"
 ---
 
