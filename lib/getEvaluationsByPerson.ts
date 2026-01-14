@@ -1,54 +1,64 @@
-import fs from "fs";
-import path from "path";
-import matter from "gray-matter";
+import { microcms } from "./microcms";
+import { Evaluation } from "@/types/evaluations";
 import { remark } from "remark";
 import html from "remark-html";
-import { Evaluation } from "@/types/evaluations";
 
-const evaluationsRoot = path.join(
-  process.cwd(),
-  "contents/evaluations"
-);
+type EvalCMS = {
+  id: string;
+  personSlug: string;
+  from: string;
+  date: string;
+  year?: number;
+  type?: string;
+  content: string;
+};
 
-export async function getEvaluationsByPerson(
-  slug: string
-): Promise<Evaluation[]> {
-  const dir = path.join(evaluationsRoot, slug);
+async function fetchAllEvaluationsByPerson(slug: string): Promise<EvalCMS[]> {
+  const all: EvalCMS[] = [];
+  const LIMIT = 100;
+  let offset = 0;
 
-  if (!fs.existsSync(dir)) return [];
+  while (true) {
+    const data = await microcms.getList<EvalCMS>({
+      endpoint: "evaluations",
+      queries: {
+        filters: `personSlug[equals]${slug}`,
+        orders: "-date",
+        limit: LIMIT,
+        offset,
+      },
+    });
 
-  const files = fs.readdirSync(dir);
+    all.push(...data.contents);
+
+    if (data.contents.length < LIMIT) break;
+    offset += LIMIT;
+  }
+
+  return all;
+}
+
+export async function getEvaluationsByPerson(slug: string): Promise<Evaluation[]> {
+  const contents = await fetchAllEvaluationsByPerson(slug);
 
   const evaluations = await Promise.all(
-    files.map(async (file) => {
-      const fullPath = path.join(dir, file);
-      const raw = fs.readFileSync(fullPath, "utf8");
-      const { data, content } = matter(raw);
-
-      const processed = await remark()
-        .use(html)
-        .process(content);
-
-      const date = data.date;
+    contents.map(async (e) => {
+      const processed = await remark().use(html).process(e.content ?? "");
+      const year = e.year ?? new Date(e.date).getFullYear();
 
       return {
-        id: file.replace(/\.md$/, ""),
-        personSlug: slug,
+        id: e.id,
+        personSlug: e.personSlug,
+        from: e.from ?? "不明",
+        date: e.date,
+        year,
+        type: e.type ?? "quote",
         contentHtml: processed.toString(),
-        from: data.from ?? "不明",
-        date,
-        year: data.year ?? new Date(date).getFullYear(),
-        type: data.type ?? "quote",
       };
     })
   );
 
   return evaluations.sort(
-    (a, b) =>
-      new Date(b.date).getTime() -
-      new Date(a.date).getTime()
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 }
-
-
-

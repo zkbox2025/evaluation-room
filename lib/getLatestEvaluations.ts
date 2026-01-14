@@ -1,30 +1,37 @@
-import fs from "fs";
-import path from "path";
-import { getEvaluationsByPerson } from "./getEvaluationsByPerson";
+import { microcms } from "./microcms";
 import { Evaluation } from "@/types/evaluations";
+import { remark } from "remark";
+import html from "remark-html";
 
-const evaluationsRoot = path.join(
-  process.cwd(),
-  "contents/evaluations"
-);
+type EvalCMS = {
+  personSlug: string;
+  from: string;
+  date: string;
+  year?: number;
+  type?: string;
+  content: string;
+};
 
-export async function getLatestEvaluations(
-  limit: number
-): Promise<Evaluation[]> {
-  const personSlugs = fs.readdirSync(evaluationsRoot);
+export async function getLatestEvaluations(limit = 5): Promise<Evaluation[]> {
+  const data = await microcms.getList<EvalCMS>({
+    endpoint: "evaluations",
+    queries: { orders: "-date", limit },
+  });
 
-  const allEvaluations: Evaluation[] = [];
+  return Promise.all(
+    data.contents.map(async (e) => {
+      const processed = await remark().use(html).process(e.content ?? "");
+      const year = e.year ?? new Date(e.date).getFullYear();
 
-  for (const slug of personSlugs) {
-    const evaluations = await getEvaluationsByPerson(slug);
-    allEvaluations.push(...evaluations);
-  }
-
-  return allEvaluations
-    .sort(
-      (a, b) =>
-        new Date(b.date).getTime() -
-        new Date(a.date).getTime()
-    )
-    .slice(0, limit);
+      return {
+        id: e.id,
+        personSlug: e.personSlug,
+        from: e.from ?? "不明",
+        date: e.date,
+        year,
+        type: e.type ?? "quote",
+        contentHtml: processed.toString(),
+      };
+    })
+  );
 }
