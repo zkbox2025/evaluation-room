@@ -23,3 +23,4 @@ export default async function PersonPage({ params }: Props) {
     </main>
   );
 }
+

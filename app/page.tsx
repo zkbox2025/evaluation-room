@@ -36,7 +36,8 @@ export default async function Home() {
                   "
                   dangerouslySetInnerHTML={{ __html: e.contentHtml }}
                 />
-                <p className="mt-4 text-sm text-right text-gray-500">― {e.from}</p>
+                <p className="mt-2 text-xs text-gray-400">slug: {e.personSlug}</p>
+
               </Link>
             ))}
           </div>

@@ -1,4 +1,3 @@
-// app/api/revalidate/route.ts
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
@@ -11,8 +10,8 @@ function auth(req: NextRequest) {
 type CMSObject = Record<string, unknown>;
 
 type WebhookBody = {
-  api?: string; // "people" | "evaluations" が想定。microCMSの設定次第で変わるので string で受ける
-  type?: string; // "create" | "edit" | "delete"
+  api?: string;     // "people" | "evaluations"
+  type?: string;    // "create" | "edit" | "delete"
   contentId?: string;
   old?: CMSObject;
   new?: CMSObject;
@@ -21,6 +20,16 @@ type WebhookBody = {
 function pickString(obj: CMSObject | undefined, key: string): string | undefined {
   const v = obj?.[key];
   return typeof v === "string" ? v : undefined;
+}
+
+// 参照フィールド person から slug を取り出す（new/oldどちらでも）
+function pickRefSlug(obj: CMSObject | undefined, refKey: string): string | undefined {
+  const ref = obj?.[refKey];
+  if (ref && typeof ref === "object") {
+    const slug = (ref as Record<string, unknown>)["slug"];
+    return typeof slug === "string" ? slug : undefined;
+  }
+  return undefined;
 }
 
 function unique(arr: string[]) {
@@ -35,13 +44,6 @@ async function parseBody(req: NextRequest): Promise<WebhookBody | null> {
   }
 }
 
-/**
- * microCMS Webhook -> Next revalidate
- * - people: トップ + /person/[slug]
- * - evaluations: トップ(最新) + /person/[slug]
- *
- * 返り値に tags/paths を含めて、検証が超ラクな版
- */
 export async function POST(req: NextRequest) {
   if (!auth(req)) {
     return NextResponse.json({ message: "Invalid secret" }, { status: 401 });
@@ -54,27 +56,23 @@ export async function POST(req: NextRequest) {
 
   const api = body.api;
 
-  // people は slug、evaluations は personSlug（または slug に入ってることもある想定）
+  // people: slug
   const newSlug = pickString(body.new, "slug");
   const oldSlug = pickString(body.old, "slug");
 
-  const newPersonSlug =
-    pickString(body.new, "personSlug") ?? pickString(body.new, "slug");
-  const oldPersonSlug =
-    pickString(body.old, "personSlug") ?? pickString(body.old, "slug");
+  // evaluations: person（参照）から slug を取る
+  const newPersonSlug = pickRefSlug(body.new, "person") ?? pickString(body.new, "personSlug");
+  const oldPersonSlug = pickRefSlug(body.old, "person") ?? pickString(body.old, "personSlug");
 
   const tags: string[] = [];
   const paths: string[] = [];
 
   // ---- people ----
   if (api === "people") {
-    tags.push("people"); // people一覧
-
-    // 該当slugだけ（人）
+    tags.push("people");
     if (newSlug) tags.push(`people:${newSlug}`);
     if (oldSlug && oldSlug !== newSlug) tags.push(`people:${oldSlug}`);
 
-    // トップ・個人ページへ影響
     paths.push("/");
     if (newSlug) paths.push(`/person/${newSlug}`);
     if (oldSlug && oldSlug !== newSlug) paths.push(`/person/${oldSlug}`);
@@ -82,22 +80,22 @@ export async function POST(req: NextRequest) {
 
   // ---- evaluations ----
   if (api === "evaluations") {
-    tags.push("evaluations"); // 評価全体
-    tags.push("evaluations:latest"); // トップの「最新の評価」用（これが効くとトップが更新される）
+    tags.push("evaluations");
+    tags.push("evaluations:latest"); // トップの最新を確実に更新
 
-    // 該当人物だけ（評価）
     if (newPersonSlug) tags.push(`evaluations:${newPersonSlug}`);
-    if (oldPersonSlug && oldPersonSlug !== newPersonSlug)
+    if (oldPersonSlug && oldPersonSlug !== newPersonSlug) {
       tags.push(`evaluations:${oldPersonSlug}`);
+    }
 
-    // トップ・個人ページへ影響
     paths.push("/");
     if (newPersonSlug) paths.push(`/person/${newPersonSlug}`);
-    if (oldPersonSlug && oldPersonSlug !== newPersonSlug)
+    if (oldPersonSlug && oldPersonSlug !== newPersonSlug) {
       paths.push(`/person/${oldPersonSlug}`);
+    }
   }
 
-  // 想定外のapiでも最低限更新（保険）
+  // 保険
   if (tags.length === 0) {
     tags.push("people", "evaluations", "evaluations:latest");
     paths.push("/");
@@ -106,7 +104,6 @@ export async function POST(req: NextRequest) {
   const uniqTags = unique(tags);
   const uniqPaths = unique(paths);
 
-  // Next推奨 profile="max"（あなたの環境の型がこれを要求している前提）
   for (const t of uniqTags) revalidateTag(t, "max");
   for (const p of uniqPaths) revalidatePath(p);
 
@@ -120,20 +117,9 @@ export async function POST(req: NextRequest) {
   });
 }
 
-/**
- * ブラウザで叩いて「今のデプロイがこの route.ts か」を確認する用
- * 例:
- *   https://<domain>/api/revalidate?secret=xxxx
- */
 export async function GET(req: NextRequest) {
   if (!auth(req)) {
     return NextResponse.json({ message: "Invalid secret" }, { status: 401 });
   }
-
-  // 反映確認しやすいように version を入れておく
-  return NextResponse.json({
-    ok: true,
-    version: "revalidate-v2",
-    now: Date.now(),
-  });
+  return NextResponse.json({ ok: true, version: "revalidate-v3-ref", now: Date.now() });
 }

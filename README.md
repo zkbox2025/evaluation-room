@@ -10,6 +10,12 @@
 *   Tailwind CSS
 *   Git / GitHub
 *   Markdown CMS（Front Matter でデータ管理）
+*   microCMS / Webhook / ISR(revalidateTag/path)
+
+## セットアップ手順
+*   MICROCMS_SERVICE_DOMAIN
+*   MICROCMS_API_KEY
+*   REVALIDATE_SECRET
 
 
 ## 起動方法
