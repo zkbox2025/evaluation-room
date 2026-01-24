@@ -7,7 +7,14 @@ function auth(req: NextRequest) {
   return !!secret && secret === process.env.REVALIDATE_SECRET;
 }
 
-type CMSObject = Record<string, unknown>;
+type PersonRef = {
+    id: string;
+    slug: string;
+};
+
+type CMSObject = Record<string, unknown> & {
+    person?: PersonRef;
+};
 
 type WebhookBody = {
   api?: string;     // "people" | "evaluations"
@@ -107,16 +114,20 @@ export async function POST(req: NextRequest) {
   for (const t of uniqTags) revalidateTag(t, "max");
   for (const p of uniqPaths) revalidatePath(p);
 
-  return NextResponse.json({
-    revalidated: true,
-    api: body.api,
-    type: body.type,
-    contentId: body.contentId ?? null,
-    tags: uniqTags,
-    paths: uniqPaths,
-  });
-}
+return NextResponse.json({
+  revalidated: true,
+  api: body.api,
+  type: body.type,
+  contentId: body.contentId ?? null,
+  tags: uniqTags,
+  paths: uniqPaths,
+  debug: {
+   newPerson: body.new && typeof body.new === "object" ? body.new.person : null,
+   oldPerson: body.old && typeof body.old === "object" ? body.old.person : null,
+  },
+});
 
+}
 export async function GET(req: NextRequest) {
   if (!auth(req)) {
     return NextResponse.json({ message: "Invalid secret" }, { status: 401 });
