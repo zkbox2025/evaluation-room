@@ -111,8 +111,13 @@ export async function POST(req: NextRequest) {
   const uniqTags = unique(tags);
   const uniqPaths = unique(paths);
 
-  for (const t of uniqTags) revalidateTag(t, "max");
-  for (const p of uniqPaths) revalidatePath(p);
+
+  const debugData = { // debug データを変数にまとめる
+    newPerson: body.new && typeof body.new === "object" ? body.new.person : null,
+    oldPerson: body.old && typeof body.old === "object" ? body.old.person : null,
+  };
+
+  console.log("--- Webhook Debug Data ---", debugData); // <-- 🚀 この行を追加 🚀
 
 return NextResponse.json({
   revalidated: true,
@@ -121,10 +126,7 @@ return NextResponse.json({
   contentId: body.contentId ?? null,
   tags: uniqTags,
   paths: uniqPaths,
-  debug: {
-   newPerson: body.new && typeof body.new === "object" ? body.new.person : null,
-   oldPerson: body.old && typeof body.old === "object" ? body.old.person : null,
-  },
+  debug: debugData, // 変数を使うように修正
 });
 
 }
