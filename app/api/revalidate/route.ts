@@ -113,6 +113,7 @@ export async function POST(req: NextRequest) {
 
 
   const debugData = { // debug データを変数にまとめる
+    api: body.api, 
     newPerson: body.new && typeof body.new === "object" ? body.new.person : null,
     oldPerson: body.old && typeof body.old === "object" ? body.old.person : null,
   };
