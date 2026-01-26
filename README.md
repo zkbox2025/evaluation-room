@@ -23,6 +23,15 @@
 
 ※ ローカル（http://localhost:3000）は Webhook が届かないため、自動反映はされません（本番での反映を確認してください）。
 
+##　　webhookデバッグチェック
+目的　microCMS から飛んでくるWebhookの中身を、Nextの /api/revalidate が“想定どおり解釈できてるか”を確認する（例　Nextがその評価が「どの人物（person）」に紐づいてるかを取得しその人物の slug を抜き出す）（成功例　newPersonSlug: "matsumoto-hitoshi"newRef: { slug: "matsumoto-hitoshi" }receivedTopKeys, rawNewKeys など）。なお、画像更新チェックは別で確認すること。
+方法　① webhookのURLの最後に一時的に&debug=1を追加する（https://evaluation-room.vercel.app/api/revalidate?secret=XXXXX&debug=1）。
+　　　②　ターミナルでmicroCMSで松本人志の評価を変更したことを命令する（例　 curl -s -X POST \
+  "https://evaluation-room.vercel.app/api/revalidate?secret=KazuKazu00441144&debug=1" \
+  -H "content-type: application/json" \
+  -d '{"api":"evaluations","type":"edit","contents":{"新規":{"publishValue":{"人":{"slug":"matsumoto-hitoshi"}}}}}' | cat）
+  　　③ ターミナルのデバッグを含んだレスポンスが返ってくればOK。（例　{"revalidated":true,"api":"evaluations","type":"edit","contentId":null,"tags":["evaluations","evaluations:latest","evaluations:matsumoto-hitoshi"],"paths":["/","/person/matsumoto-hitoshi"],"debug":{"receivedTopKeys":["新規"],"rawOldKeys":null,"rawNewKeys":["publishValue"],"newPersonSlug":"matsumoto-hitoshi","newRef":{"slug":"matsumoto-hitoshi"},"oldRef":null}）
+
 ## ヘルスチェック（DB整合性チェック）
 
 本プロジェクトでは、microCMS のデータ整合性（参照切れなど）を確認するためのヘルスチェックAPIを用意しています。
