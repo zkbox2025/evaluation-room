@@ -8,68 +8,63 @@ function auth(req: NextRequest) {
   return !!secret && secret === process.env.REVALIDATE_SECRET;
 }
 
-type UnknownObj = Record<string, unknown>;
+type CMSObject = Record<string, unknown>;
+type CMSContents = Record<string, unknown>;
 
 type WebhookBody = {
   service?: string;
   api?: string; // "people" | "evaluations"
-  id?: string;
   type?: string; // "create" | "edit" | "delete"
-  contents?: {
-    old?: UnknownObj;
-    new?: UnknownObj;
-  };
+  id?: string;
+  contentId?: string; // 念のため
+  contents?: CMSContents; // microCMS実Webhookはここに old/new が入る
 };
 
-function isObj(v: unknown): v is UnknownObj {
-  return !!v && typeof v === "object";
+function isObj(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
 }
 
-function pickString(v: unknown): string | undefined {
+/**
+ * microCMS webhook の old/new（または "新規"）の中身は、
+ * - 直接 publishValue を持つ場合
+ * - { publishValue, draftValue } のラッパーの場合
+ * があるので、publishValue があればそれを優先して返す
+ */
+function unwrapValue(node: unknown): CMSObject | undefined {
+  if (!isObj(node)) return undefined;
+  const publishValue = node["publishValue"];
+  if (isObj(publishValue)) return publishValue;
+  return node as CMSObject;
+}
+
+function pickString(obj: CMSObject | undefined, key: string): string | undefined {
+  if (!obj) return undefined;
+  const v = obj[key];
   return typeof v === "string" ? v : undefined;
 }
 
-/**
- * microCMS webhook は
- *  - contents.new.publishValue / contents.new.draftValue
- *  - contents.old.publishValue / contents.old.draftValue
- * のどこかに実データが入ることが多い
- */
-function unwrapValue(node: UnknownObj | undefined): UnknownObj | undefined {
-  if (!node) return undefined;
-  const pv = isObj(node.publishValue) ? node.publishValue : undefined;
-  const dv = isObj(node.draftValue) ? node.draftValue : undefined;
-  return pv ?? dv ?? node;
-}
+/** 参照フィールド（person / 人）から slug を取り出す */
+function pickRefSlug(obj: CMSObject | undefined): string | undefined {
+  if (!obj) return undefined;
 
-/**
- * 参照フィールド（person / 人）から slug を拾う
- * - person.slug
- * - 人.slug
- */
-function pickPersonSlug(value: UnknownObj | undefined): string | undefined {
-  if (!value) return undefined;
+  // 英語フィールド名 "person" / 日本語フィールド名 "人" どっちでも拾う
+  const ref = obj["person"] ?? obj["人"];
+  if (!isObj(ref)) return undefined;
 
-  // 参照フィールド名の候補（フィールドIDが日本語になっている場合も拾う）
-  const ref =
-    (isObj(value.person) ? value.person : undefined) ??
-    (isObj((value as UnknownObj)["人"]) ? (value as UnknownObj)["人"] : undefined);
-
-  if (isObj(ref)) {
-    return pickString(ref.slug);
-  }
-
-  // 旧設計の personSlug も一応拾っておく（保険）
-  return pickString((value as UnknownObj).personSlug);
-}
-
-function pickSlug(value: UnknownObj | undefined): string | undefined {
-  if (!value) return undefined;
-  return pickString(value.slug);
+  const slug = ref["slug"];
+  return typeof slug === "string" ? slug : undefined;
 }
 
 function unique(arr: string[]) {
   return Array.from(new Set(arr.filter(Boolean)));
+}
+
+async function parseBody(req: NextRequest): Promise<WebhookBody | null> {
+  try {
+    return (await req.json()) as WebhookBody;
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -79,24 +74,30 @@ export async function POST(req: NextRequest) {
 
   const debug = req.nextUrl.searchParams.get("debug") === "1";
 
-  const body = (await req.json().catch(() => null)) as WebhookBody | null;
+  const body = await parseBody(req);
   if (!body) {
     return NextResponse.json({ message: "Invalid JSON" }, { status: 400 });
   }
 
+  // microCMS実Webhook: contents.old / contents.new が基本。
+  // 表示上 "新規" になってるケースもあるので両対応
+  const contents = isObj(body.contents) ? body.contents : undefined;
+
+  const rawOld = contents?.["old"];
+  const rawNew = contents?.["new"] ?? contents?.["新規"]; // ← any無しでOK
+
+  const oldNode = unwrapValue(rawOld);
+  const newNode = unwrapValue(rawNew);
+
   const api = body.api;
 
-  // new/old の実データを publishValue/draftValue から取り出す
-  const newNode = unwrapValue(isObj(body.contents?.new) ? body.contents?.new : undefined);
-  const oldNode = unwrapValue(isObj(body.contents?.old) ? body.contents?.old : undefined);
-
   // people: slug
-  const newSlug = pickSlug(newNode);
-  const oldSlug = pickSlug(oldNode);
+  const newSlug = pickString(newNode, "slug");
+  const oldSlug = pickString(oldNode, "slug");
 
-  // evaluations: person参照（person or 人）から slug
-  const newPersonSlug = pickPersonSlug(newNode);
-  const oldPersonSlug = pickPersonSlug(oldNode);
+  // evaluations: person参照からslug（または personSlug を残してる場合のフォールバック）
+  const newPersonSlug = pickRefSlug(newNode) ?? pickString(newNode, "personSlug");
+  const oldPersonSlug = pickRefSlug(oldNode) ?? pickString(oldNode, "personSlug");
 
   const tags: string[] = [];
   const paths: string[] = [];
@@ -129,7 +130,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 保険：apiが想定外でもトップだけ更新
+  // 保険
   if (tags.length === 0) {
     tags.push("people", "evaluations", "evaluations:latest");
     paths.push("/");
@@ -141,35 +142,36 @@ export async function POST(req: NextRequest) {
   for (const t of uniqTags) revalidateTag(t, "max");
   for (const p of uniqPaths) revalidatePath(p);
 
-  const res: UnknownObj = {
+  const debugData = debug
+    ? {
+        receivedTopKeys: contents ? Object.keys(contents) : null,
+        rawOldKeys: isObj(rawOld) ? Object.keys(rawOld) : null,
+        rawNewKeys: isObj(rawNew) ? Object.keys(rawNew) : null,
+        newPersonSlug,
+        oldPersonSlug,
+        newRef: newNode ? (newNode["person"] ?? newNode["人"] ?? null) : null,
+        oldRef: oldNode ? (oldNode["person"] ?? oldNode["人"] ?? null) : null,
+      }
+    : undefined;
+
+  return NextResponse.json({
     revalidated: true,
-    api,
+    api: body.api ?? null,
     type: body.type ?? null,
-    id: body.id ?? null,
+    contentId: body.contentId ?? body.id ?? null,
     tags: uniqTags,
     paths: uniqPaths,
-  };
-
-  if (debug) {
-    res.debug = {
-      newKeys: newNode ? Object.keys(newNode) : null,
-      oldKeys: oldNode ? Object.keys(oldNode) : null,
-      newSlug,
-      oldSlug,
-      newPersonSlug,
-      oldPersonSlug,
-      // 「人」参照が本当に入ってるか確認用
-      newPersonRaw: newNode ? ((newNode as UnknownObj)["人"] ?? newNode.person ?? null) : null,
-      oldPersonRaw: oldNode ? ((oldNode as UnknownObj)["人"] ?? oldNode.person ?? null) : null,
-    };
-  }
-
-  return NextResponse.json(res);
+    ...(debug ? { debug: debugData } : {}),
+  });
 }
 
 export async function GET(req: NextRequest) {
   if (!auth(req)) {
     return NextResponse.json({ message: "Invalid secret" }, { status: 401 });
   }
-  return NextResponse.json({ ok: true, version: "revalidate-v4-microcms-real", now: Date.now() });
+  return NextResponse.json({
+    ok: true,
+    version: "revalidate-v4-no-any",
+    now: Date.now(),
+  });
 }
