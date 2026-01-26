@@ -10,7 +10,28 @@
 *   Tailwind CSS
 *   Git / GitHub
 *   Markdown CMS（Front Matter でデータ管理）
-*   microCMS / Webhook / ISR(revalidateTag/path)
+*   microCMS / Webhook / ISR(revalidateTag/path) / Nextキャッシュ更新
+
+## 更新フロー（microCMS → 本番反映）
+
+本番サイト（Vercel）は Next.js のキャッシュを利用しており、microCMS 側の更新は Webhook 経由で自動反映されます。
+
+1. microCMS で人物（people）/ 評価（evaluations）を作成・編集・削除
+2. microCMS の Webhook が `POST /api/revalidate` を呼び出す
+3. Next.js 側で `revalidateTag` / `revalidatePath` を実行して、トップページ・個人ページのキャッシュを再検証
+4. 次回アクセス時に最新データへ更新される
+
+※ ローカル（http://localhost:3000）は Webhook が届かないため、自動反映はされません（本番での反映を確認してください）。
+
+## ヘルスチェック（DB整合性チェック）
+
+本プロジェクトでは、microCMS のデータ整合性（参照切れなど）を確認するためのヘルスチェックAPIを用意しています。
+
+- エンドポイント: `/api/health`
+- 目的:
+  - 評価（evaluations）が参照している人物（people）が存在するか（slug / 参照切れチェック）
+  - 想定外のデータ構造（必須フィールド欠損など）の検知
+
 
 ## セットアップ手順
 *   MICROCMS_SERVICE_DOMAIN

@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 
+
 function auth(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get("secret");
   return !!secret && secret === process.env.REVALIDATE_SECRET;
