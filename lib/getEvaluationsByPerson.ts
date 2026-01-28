@@ -1,5 +1,5 @@
-import { microcms } from "./microcms";
-import { Evaluation } from "@/types/evaluations";
+import { microcms } from "./microcms";　//lib/microcms.tsからmicrosmsだけをここで使えるように持ってきて！
+import { Evaluation } from "@/types/evaluations";///types/evaluationsからEvaluationだけをここで使えるように持ってきて！
 import { remark } from "remark";
 import html from "remark-html";
 import { unstable_cache } from "next/cache";
