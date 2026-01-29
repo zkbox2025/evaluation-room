@@ -3,8 +3,8 @@ import { getPeople, groupPeopleByCategory } from "@/lib/getPerson";
 import { getLatestEvaluations } from "@/lib/getLatestEvaluations";
 
 export default async function Home() {
-  const people = await getPeople();
-  const grouped = groupPeopleByCategory(people);
+  const people = await getPeople();//getPeople()を実行して、戻り値（Person[] 型のリスト）を peopleという変数で受け取る
+  const grouped = groupPeopleByCategory(people);//peopleという変数を、groupPeopleByCategory関数の引数として渡す
   const latest = await getLatestEvaluations(5);
 
   return (
