@@ -4,7 +4,7 @@ import { remark } from "remark";//インストール済みのremarkからMarkdow
 import html from "remark-html";//インストール済みのremark-htmlからremarkと組み合わせてHTMLに出力するライブラリだけをここで使えるように持ってきて！
 import { unstable_cache } from "next/cache";//next/cacheからunstable_cacheだけをここで使えるように持ってきて！
 
-type PersonRef = {//microCMSから取得する人物データの型定義
+type PersonRef = {//microCMSのevaluation(エンドポンド)から取得する参照用データ（この評価は誰のものかを示す紐付けデータ）
   id: string;
   slug: string;
 };

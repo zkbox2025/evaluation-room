@@ -21,7 +21,7 @@ type WebhookBody = {
   contents?: CMSContents; // microCMS実Webhookはここに old/new が入る
 };
 
-function isObj(v: unknown): v is Record<string, unknown> {
+function isObj(v: unknown): v is Record<string, unknown> {//型ガード関数：unknown（何が来るかわからない）データを「これは中身があるオブジェクトだよ」とTypeScriptに教えるための関数
   return typeof v === "object" && v !== null;
 }
 

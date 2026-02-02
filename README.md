@@ -153,6 +153,17 @@ HeadlessCMSのまとめ
 ② SDK導入　microCMSにて情報変更後にサイトにアクセスした際にVSCodeが新しい情報をmicroCMSにとりに行く時に必要な認証情報を定義し（サービスドメインとAPIキー）、VercelとmicroCMSを繋ぐ架け橋を作成すること。具体的には、microcms-js-sdkをインストールしlib/microcms.tsと.env.localを作成する。
 ③ 型（types）をCMS仕様に揃える。
 ④ libを「microCMS版」に置き換える。libの中で評価や人物情報をとりに行く先が.mdからmicroCMSに変える。
+⑤ microCMSの更新を反映させる方法を２つ設定する（時間ベースの自動再検証（ISR）と手動再検証）
+※流れとしては、microCMSで公開/更新→webhookでNext.jsに通知→Next.js側でrevalidateTag/revalidatePathを叩いてキャッシュを捨てて最新データを表示する。この設定を以下で行う
+❺-1 環境変数(webhook用の秘密の鍵：REVALIDATE_SECRET=...　※microCMSからVercelへの命令）を.env.localに追加。
+❺-2 Vercelにプロジェクトを作成しGitリポジトリをインポートする。プロジェクト内で環境変数の設定を行う。環境ブランチ設定をメインにする。
+❺-3 Route Handler（キャッシュ更新用窓口：microCMSのWebhookを受け取って、特定のキャッシュを消す機能。app/api/revalidate/route.tsのファイルをVSCodeで作成。）を作成するのと、データ取得にタグをつける：lib/getPersonなどのlib関数のコードにキャッシュ機能を追加でつけるのを行う（import { unstable_cache } from "next/cache"やexport const getPeople = unstable_cache...など）（unstable_cache につけるタグ名と、Route Handlerで revalidateTag する名前が1文字でも違うと動かないので完全に一致させること）
+❺-4 Github（Vercel連携済み）に❺-3をプッシュしVercelに自動ビルド。
+❺-5 microCMS側のWebhook設定　microCMS管理画面→コンテンツ選択→API設定→webhook→追加→サービスを選択する（カスタムを選択）→Webhook URLを設定（公開用URL（ドメイン）https://evaluation-room.vercel.app/にRoute Handlerのパスapi/revalidate?secret=・・・をつけたもの）→通知タイミングの設定に全てチェック→設定を押す→コンテンツが複数ある場合は、全て設定する
+❺-6 動手動再検証の動作確認：microCMSで公開/更新→本番環境（https://evaluation-room.vercel.app）で内容が変われば成功→Vercelのキャッシュ削除の方のログ（ビルドログではない）を見て200が出てれば成功
+※route.tsについて
+タグ（Tag）ベースの再検証: 特定のグループ（例：people）だけ更新（スラッグをつけてピンポイント更新も行える）。
+パス（Path）ベースの再検証: 特定のURL（例：/person/suzuki）を更新。
 
 
 2026/01/28
@@ -171,3 +182,9 @@ HeadlessCMSのまとめ
 ⚫︎acc=累積値のこと　queries=命令のこと
 ⚫︎microCMSには「Markdown形式のデータ」が保存されるのでremarkでMarkdown文字列をHTMLに変換するのは必要。
 ⚫︎Markdown版のテキストをHTMLに変換して出力するには、原則として「remark」と「remark-html」の2つのパッケージをインストールしておくの必要がある。
+2026/01/30
+⚫︎queriesとordersの違い
+①queries (クエリ全体)：APIに対する「注文書」のようなもの
+②orders (並べ替え命令)：クエリの中の一項目
+2026/02/02
+⚫︎
