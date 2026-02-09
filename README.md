@@ -16,18 +16,18 @@
 
 本番サイト（Vercel）は Next.js のキャッシュを利用しており、microCMS 側の更新は Webhook 経由で自動反映されます。
 
-1. microCMS で人物（people）/ 評価（evaluations）を作成・編集・削除
+1. microCMS で人物（people）/ 評価（evaluations）を作成・編集・削除(peopleのslugは英小文字・数字・ハイフン)
 2. microCMS の Webhook が `POST /api/revalidate` を呼び出す
 3. Next.js 側で `revalidateTag` / `revalidatePath` を実行して、トップページ・個人ページのキャッシュを再検証
 4. 次回アクセス時に最新データへ更新される
 
 ※ ローカル（http://localhost:3000）は Webhook が届かないため、自動反映はされません（本番での反映を確認してください）。
 
-##　　webhookデバッグチェック
+##　　webhookデバッグチェック（受信側）
 目的　microCMS から飛んでくるWebhookの中身を、Nextの /api/revalidate が“想定どおり解釈できてるか”を確認する（例　Nextがその評価が「どの人物（person）」に紐づいてるかを取得しその人物の slug を抜き出す）（成功例　newPersonSlug: "matsumoto-hitoshi"newRef: { slug: "matsumoto-hitoshi" }receivedTopKeys, rawNewKeys など）。なお、画像更新チェックは別で確認すること。
 方法　① webhookのURLの最後に一時的に&debug=1を追加する（https://evaluation-room.vercel.app/api/revalidate?secret=XXXXX&debug=1）。
 　　　②　ターミナルでmicroCMSで松本人志の評価を変更したことを命令する（例　 curl -s -X POST \
-  "https://evaluation-room.vercel.app/api/revalidate?secret=KazuKazu00441144&debug=1" \
+  "https://evaluation-room.vercel.app/api/revalidate?secret=・・・&debug=1" \
   -H "content-type: application/json" \
   -d '{"api":"evaluations","type":"edit","contents":{"新規":{"publishValue":{"人":{"slug":"matsumoto-hitoshi"}}}}}' | cat）
   　　③ ターミナルのデバッグを含んだレスポンスが返ってくればOK。（例　{"revalidated":true,"api":"evaluations","type":"edit","contentId":null,"tags":["evaluations","evaluations:latest","evaluations:matsumoto-hitoshi"],"paths":["/","/person/matsumoto-hitoshi"],"debug":{"receivedTopKeys":["新規"],"rawOldKeys":null,"rawNewKeys":["publishValue"],"newPersonSlug":"matsumoto-hitoshi","newRef":{"slug":"matsumoto-hitoshi"},"oldRef":null}）
@@ -39,7 +39,10 @@
 - エンドポイント: `/api/health`
 - 目的:
   - 評価（evaluations）が参照している人物（people）が存在するか（slug / 参照切れチェック）
-  - 想定外のデータ構造（必須フィールド欠損など）の検知
+  - people の slugに重複がないか
+  - people の slug のフォーマット通りになっているか（英小文字・数字・ハイフンのみ使用可能）
+- 検証方法：
+　- https://evaluation-room.vercel.app/api/health/integrity?secret=・・・にブラウザでアクセスすると画面に文字（JSON）が返ってくる
 
 
 ## セットアップ手順
@@ -136,7 +139,7 @@ type: "quote"
 ⚫︎github上のあるブランチの履歴を変えたらVScodeのステータスバーをそのブランチに変えるとGithubの履歴変更が反映される。つまり作業ディレクトリ内のファイルすべてを、そのブランチの最新の状態に物理的に置き換えることができる。GithubとVscodeは繋がっている。
 ⚫︎⭐️ローカル環境 (http://localhost:3000/)では、VSCodeでコードをいじると即反映してくれる。開発者のPC内でしかアクセスできない。
 　⭐️本番環境 (https://evaluation-room.vercel.app)では、コードの変更をGitpushしてVercelがサーバー上で新しいサイトをデプロイし終わると、変更が反映される。なお、不特定多数のユーザーがアクセスできる公開されたウェブサイトのURLでもある。
-　⭐️WebhookのURL（https://evaluation-room.vercel.app/api/revalidate?secret=REVALIDATE_SECRET）は、つまりmicroCMSとVercelを繋ぐ「秘密の電話番号」。microCMSでコンテンツを更新し保存すると、microCMSは登録されたWebhook URL（秘密の電話番号）にアクセスする。Vercelは「この電話番号にアクセスがあった（合図が来た）ぞ！しかも秘密の鍵も正しい！」と判断し、キャッシュの削除（再バリデーション）を実行します。なお、新しい情報の表示についてはユーザーがアクセスする際に、VercelがmicroCMSに取りに行き表示する。
+　⭐️WebhookのURL（https://evaluation-room.vercel.app/api/revalidate?secret=REVALIDATE_SECRET）は、つまりmicroCMSとVercelを繋ぐ「秘密の電話番号」。microCMSでコンテンツを更新し保存すると、microCMSは登録されたWebhook URL（秘密の電話番号）にアクセスする。Vercelは「この電話番号にアクセスがあった（合図が来た）ぞ！しかも秘密の鍵も正しい！」と判断し、キャッシュの削除（再バリデーション）を実行します。なお、新しい情報の表示についてはユーザーがアクセスする際に、VercelがmicroCMSに取りに行き表示する。なお、ブラウザでこのURLを開いて繋がっていればok,trueと書いてあるというコードをrevalidate/route.tsのGET関数で書いている。
 　⭐️ヘルスチェックエンドポンド（ローカル：http://localhost:3000/api/health/integrity?secret=REVALIDATE_SECRET　本番環境：https://evaluation-room.vercel.app/api/health/integrity?secret=REVALIDATE_SECRET）は,サーバーの健全性（ヘルスチェック）の確認（「データベースに接続できるか」「必要な外部サービスと通信できるか」「重要なデータが壊れていないか（整合性）」）や新しいバージョンのデプロイ（公開）時にユーザーからのアクセス）を流す前に、VercelがこのURLにアクセスして最終確認を行うなど。ローカルは開発中のテスト用で開発者のPC内でしかアクセスできない。本番環境は、公開後の運用監視用。
 　⭐️プレビューURL（https://[gitのブランチ名]-[プロジェクト名].vercel.app）は、GitHubにプッシュするたびに、Vercelが自動生成する一時的なテスト用URLで、GitHubにプッシュした後、本番にデプロイされるまで（ステージング環境/プレビュー環境）にチームメンバーや自動テストツールが最終チェックを行うもの。
 ⚫Next.jsはコード管理（GitHub）、データ管理（microCMS）、公開環境（Vercel）という3つの要素すべてに関与する司令塔。①フロントエンドの構築（ユーザーがブラウザで見るHTML、CSS、JavaScriptの画面を作り出す。VSCodeで書いているコードの大部分はNext.jsの記法に従っている。）②データとコードの橋渡し役（microCMS（データベース）とVercel（公開環境）の間でデータのやり取りを制御する「パイプ役」）③キャッシュの管理とWebhookの受け口（司令塔）（ユーザーアクセス時にキャッシュを高速で提供する。Webhook（合図）を受け取るためのAPIルート (/api/revalidate) を提供する。合図が来たらキャッシュを削除する（再バリデーション）機能を提供する。）
@@ -163,7 +166,8 @@ HeadlessCMSのまとめ
 ❺-6 手動再検証の動作確認：microCMSで公開/更新→本番環境（https://evaluation-room.vercel.app）で内容が変われば成功→Vercelのキャッシュ削除の方のログ（ビルドログではない）を見て200が出てれば成功
 ※route.tsについて
 ❺-7 route.ts が、URL（slug）を正しく受け取ってキャッシュを消せるかの確認と新しいページの作成（再生成）の確認（webhook受信ログ（&debug=1）をroute.tsに書いてる前提）
-webhookのURLに&debug=1を付け加える→ターミナルでcurl -X POSTする（「お掃除命令」）→ターミナルで返ってきたdebug詳細を読む{"revalidated": true, "debug": {...}} →本番環境を開く（https://evaluation-room.vercel.app）→反映を確認→Vercelの管理画面（Logs）で新しいページを作ったログを確認。
+⚫︎受信側のチェックの場合：webhookのURLに&debug=1を付け加える→ターミナルでcurl -X POSTする（「お掃除命令」）→ターミナルで返ってきたdebug詳細を読む{"revalidated": true, "debug": {...}} →本番環境を開く（https://evaluation-room.vercel.app）→反映を確認→Vercelの管理画面（Logs）で新しいページを作ったログを確認。
+⚫︎送信側のチェックの場合：microCMSを更新する→Webhook.site経由で送信ログを見る。
 タグ（Tag）ベースの再検証: 特定のグループ（例：people）だけ新しいグループ情報をとりに行く（スラッグをつけてピンポイント更新も行える）。主にトップページの更新（人物一覧の更新）の際に必要。
 パス（Path）ベースの再検証: 特定のURL（例：/person/suzuki）を新しく作り直す。主に個人ページの生成に必要。
 
@@ -196,3 +200,11 @@ webhookのURLに&debug=1を付け加える→ターミナルでcurl -X POSTす�
 ⚫︎POST関数とは、サーバーに対して「新しいデータの作成・保存」や「情報の送信」を要求されたときに実行される専用の処理のこと
 ⚫︎revalidateする＝古くなったキャッシュを最新の状態に更新し直すこと
 ⚫︎newNode/oldNode：更新前のデータ/更新後のデータ
+2026/02/07
+POSTとGETの違い
+⚫︎POST：サーバーがデータをやり取りする際にデータの送信や登録に向いており、詳細なデータ（JSONなど）を送信したり（データ量に制限がないためリクエストボディに大量のJSONデータを格納して送ることができる）、セキュリティ面で安全なものを送信する際に使う（URLには表示されない）。簡単にいうと「中身を盗み見られたくない！」「サーバーのデータを書き換えたい！」という時に使う。
+※POSTの確認の仕方：①microCMSから実際に編集して飛ばして、webhook.siteを経由して “届いたJSON” を見る（送信側のデータチェック）②&debug=1設定後にcurlで疑似Webhookをターミナルで投げて、ターミナルの表示を見る（受信側のデータチェック）③Vercel Logs で POST を見る（受信側のデータチェック）
+⚫︎GET：データの取得に向いており、	データがURLに表示されるため、誰でも見れることからURLをコピーして他人に送ったり、ブックマークに保存したりする際に使える。また、サーバー（CDNなど）に内容をキャッシュ（一時保存）させる際にも使う。簡単にいうと「このページを誰かに教えたい！」「何度も素早く表示したい！」という時に使う。
+※GETの確認の仕方：本番環境（https://evaluation-room.vercel.app/api/revalidate?secret=・・・）をブラウザで開いて、"ok": true,が出たら生存確認（例：インターホンがつながった）
+2026/02/09
+⚫︎バリテーション：入力されたデータが正しい形式かどうかをチェックすること

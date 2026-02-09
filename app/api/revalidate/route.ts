@@ -151,6 +151,7 @@ export async function POST(req: NextRequest) {//WebhookのPOST関数
 
   const debugData = debug//処理がうまくいかなかった時、何が原因か突き止めるための詳細レポート
   //URLの末尾に &debug=1をwebhookにつけてアクセスした場合にdebugData の中身が表示され処理の中身がわかる
+  //webhookの“中身がどういう形か” を見て、デバッグ情報（送信側がきちんと送れているか。受信したJSONのキーや person参照のslug等）をレスポンスに含めて返すPOST関数
     ? {
         receivedTopKeys: contents ? Object.keys(contents) : null,
         rawOldKeys: isObj(rawOld) ? Object.keys(rawOld) : null,
@@ -173,8 +174,8 @@ export async function POST(req: NextRequest) {//WebhookのPOST関数
   });
 }
 
-export async function GET(req: NextRequest) {//このプログラムの生存確認用のGET関数（microCMSを更新し本番環境orローカル開発中: http://localhost:3000/api/revalidate?secret=合言葉にアクセスするとok:trueとでる）
-  if (!auth(req)) {
+export async function GET(req: NextRequest) {//このプログラムの生存確認用(疎通確認用)のGET関数（microCMSを更新し本番環境：https://evaluation-room.vercel.app/api/revalidate?secret=KazuKazu00441144orローカル開発中: http://localhost:3000/api/revalidate?secret=合言葉にアクセスするとok:trueとでる）
+  if (!auth(req)) {                          //secret が合っているか,どのバージョンの route.ts がデプロイされているか,401じゃないか を確認するための関数（例えるとインターホンが繋がってるかの確認をキャッシュを消さずに行う）
     return NextResponse.json({ message: "Invalid secret" }, { status: 401 });//401 Unauthorized エラーを返す
   }
   return NextResponse.json({
@@ -183,3 +184,4 @@ export async function GET(req: NextRequest) {//このプログラムの生存確
     now: Date.now(),
   });
 }
+
