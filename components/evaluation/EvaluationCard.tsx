@@ -1,24 +1,26 @@
-type Props = {
-  contentHtml: string;
-  from: string;
-};
+import { Evaluation } from "@/types/evaluations";
+import { LikeButton } from "./LikeButton";//いいねボタンのコンポーネント（UIの部品）およびプロパティ（色や形の指示書）に関する関数を呼び出す
 
-export function EvaluationCard({ contentHtml, from }: Props) {
+
+
+type Props = Evaluation;//評価カードのコンポーネント（UIの部品）のプロパティ（色や形の指示書）の型を定義する
+
+
+//評価カードのコンポーネント（UIの部品）およびプロパティに関する関数
+export function EvaluationCard({ id, contentHtml, from, isLiked = false }: Props) {
   return (
-    <article className="bg-white rounded-xl p-6 shadow-sm">
+    <article className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
       <div
-        className="
-          prose prose-neutral max-w-none
-          prose-blockquote:border-l-0
-          prose-blockquote:pl-0
-          prose-blockquote:before:content-none
-        "
-        dangerouslySetInnerHTML={{ __html: contentHtml }}
+        className="prose prose-neutral max-w-none ..."//評価の内容をHTMLのまま表示するための要素を定義する
+        dangerouslySetInnerHTML={{ __html: contentHtml }}//HTMLをそのまま挿入するための特別な属性
       />
-
-      <p className="mt-4 text-right text-sm text-gray-500">
-        ― {from}
-      </p>
+      
+      <div className="flex items-center justify-between mt-4">
+        {/* ★ ここにボタンを配置 */}
+        <LikeButton evaluationId={id} initialIsLiked={isLiked} />
+        
+        <p className="text-right text-sm text-gray-500">― {from}</p>
+      </div>
     </article>
   );
 }
