@@ -9,6 +9,8 @@ type Props = {//ページコンポーネントのプロパティの型を定義�
   params: Promise<{ slug: string }>;
 };
 
+export const dynamic = "force-dynamic";//このページは常に最新の情報を表示する（毎回DBを見に行く）設定だから事前に組み立てなくていいよという指示
+
 export default async function PersonPage({ params }: Props) {//人物の詳細ページコンポーネントの非同期関数を公開
   const { slug } = await params;//params（URL）からslugを取り出す
 
