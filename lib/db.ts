@@ -1,10 +1,10 @@
-//.ts や .tsx ファイルのコードを書き換えるたびにPrismaClient(電話回線)が新しく作らずに今あるものを使うための設定
+//設計図(schema.prisma)を書き換えるたびにPrismaClient(電話回線)が新しく作らずに今あるものを使うための設定
 import { PrismaClient } from "@prisma/client";
 
 //globalThis は、再起動しても消えない「共通の倉庫」のような場所。そこに prisma という名前で道具を置いておけるように型を定義している
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-export const prisma =//prismaClientがすでにあればそれを使い、なければ新しく作る
+export const prisma =//prismaClient（電話回線）がすでにあればそれを使い、なければ新しく作る関数を公開
   globalForPrisma.prisma ??
   new PrismaClient({
     log: ["error", "warn"],//エラーと警告だけターミナルにメッセージを表示する

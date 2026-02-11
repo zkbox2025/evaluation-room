@@ -210,14 +210,14 @@ POSTとGETの違い
 2026/02/09
 ⚫︎バリテーション：入力されたデータが正しい形式かどうかをチェックすること
 ⚫︎ORM（Prisma等）：SQLという専用の呪文を覚えなくても、JavaScriptの書き方だけでSupabaseを操れるようになる翻訳ツール
-⚫︎Supabase（スパベース）：Webアプリ開発に必要な「バックエンド機能（サーバー側の仕組み）」をまるごと提供してくれるサービス
+⚫︎Supabase（スパベース）：Webアプリ開発に必要な「バックエンド機能（サーバー側の仕組み）」をまるごと提供してくれるサービス。データの倉庫の役割。
 ⚫︎役割分担（①,②）
 ① microCMS（管理者が作るコンテンツ）：人物・評価（本文）＝編集者が管理する“静的コンテンツ”
 ② DB（ユーザーがうむコンテンツ）：ユーザーが生む“動的データ”例）お気に入り、いいね、閲覧数、コメント（任意）、通報（任意）
 ⚫︎prisma/schema.prismaは、Prismaを使ってJavaScript/TypeScriptでプログラムを書くための道具（Client）を自動で作ってねという命令のためのファイル。例えると家の設計図。
 ⚫︎prisma/migrationsは、Prismaが裏側で自動的に**「SQL（データベース専用の難しい言語）」**に翻訳して保存してくれているファイル。これが「prisma/schema.prismaのコードをいつ、どんな変更をしたか」の履歴になる。例えると家の増築・改築の記録
 2026/02/10
-⚫︎lib/db.ts：データベース専用の電話回線を、1本だけに絞って使うためのルール
+⚫︎lib/db.ts：prismaを使ってsupabaseとVSCodeで書いたファイルを繋げる電話線になるファイル（データベース専用の電話回線を、1本だけに絞って使うためのルールが書かれている）
 目的：Next.js（特に開発中）は、.ts や .tsx ファイルのコードを書き換えるたびにアプリを何度も再起動する。その際、普通に new PrismaClient() と書くと、再起動のたびに新しい電話回線（接続）を増やしてしまう。なので、すでに回線がつながっているなら、新しいのは作らずに今あるものを使えという命令がこのファイルの中身。
 ⚫︎まとめ：Supabase（スパベース）の設計図（migrations）は本来SQLで書く必要があって、それをJavaScript/TypeScriptから翻訳するのがprismaの役目で、それを命令している＋JavaScript/TypeScript版の設計図がprisma/schema.prisma。
 ⚫︎db pull（逆翻訳）：データベースであるSupabaseを見て、設計図（prisma/schema.prisma）を上書きする機能。目的としては、データベースを直接いじった時のためやチーム開発などで他人が変えた内容を自分のPCに取り込むためなどがある。なお、基本的には、schema.prisma を書き換えてから migrate dev（自分 → DB）をする一方通行。もし消えてしまったら、書き直すかGitなどの履歴から戻す必要がある。
@@ -230,3 +230,9 @@ POSTとGETの違い
 ⚫︎components/evaluation/LikeButton.tsx：いいねボタン部品の作成ファイル
 ⚫︎.map(): JavaScriptの配列（Array）が持っている機能で、「リストの中身を1つずつ取り出して、別の形に変換して新しいリストを作る」という命令。
 ⚫︎オレンジ色の波線: エラー（動かない）ではないけれど、「使っていないコードがあるから整理したほうがいいよ」というVSCodeからのアドバイス
+⚫︎prismaを使ってSupabase（スパベース）の設計図を書く手順
+①初期準備：環境変数の設定を行う（ターミナル操作の前に、Supabaseのプロジェクト設定から取得した接続URL（DATABASE_URL）を .env ファイルに設定しておくのとVercelに設定しておく）。プロジェクトでPrismaを使えるようにするため、ターミナルで初期化コマンドを打つ（npx prisma init）。これにより prisma/schema.prisma という設計図のファイルが自動生成される。
+②VSCodeで設計図を書く：schema.prisma を開いて、テーブル（モデル）の定義を書き込む。この間、ターミナルで何かを起動（常駐）させておく必要はない。
+③設計図をSupabaseに反映させる：書き終えた設計図の内容を、実際のSupabaseのデータベースに反映させるためにターミナルを使う。開発中の反映：npx prisma db push　履歴を残す場合：npx prisma migrate dev --name init
+④VSCodeに新しい項目を教えてあげて、prismaClient（電話回線）を最新にする：npx prisma generate
+⚫︎prismaClient（電話回線）について：Prisma Clientは、VSCodeとSupabaseを繋ぎ、言葉を翻訳してデータを運ぶ「電話回線」。設計図 (schema.prisma)があった場合、supabase（データの倉庫）が発行したDATABASE_URL（supabaseの住所）を使ってインターネット越しにSupabaseを呼び出し設計図通りに作るように指示（npx prisma migrate dev）。VSCodeに新しい項目を教えてあげて、prismaClient（電話回線）を最新にする（npx prisma generate）
