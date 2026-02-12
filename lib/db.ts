@@ -1,12 +1,21 @@
 //設計図(schema.prisma)を書き換えるたびにPrismaClient(電話回線)が新しく作らずに今あるものを使うための設定
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg"
 
 //globalThis は、再起動しても消えない「共通の倉庫」のような場所。そこに prisma という名前で道具を置いておけるように型を定義している
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
+// 1. 実際のデータベース（PostgreSQL）に繋ぐためのプール（DBへの電話回線を束ねる装置）を作る
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// 2. Prismaが理解できる形（アダプター：PrismaPg）に変換する
+const adapter = new PrismaPg(pool);
+
+
 export const prisma =//prismaClient（電話回線）がすでにあればそれを使い、なければ新しく作る関数を公開
   globalForPrisma.prisma ??
   new PrismaClient({
+　adapter, // ★ ここでアダプターを渡すのが新ルール！
     log: ["error", "warn"],//エラーと警告だけターミナルにメッセージを表示する
   });
 
