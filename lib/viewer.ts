@@ -8,7 +8,11 @@ export async function getOrCreateViewer() {
 
   // deviceIdがない場合は、Middlewareがまだ動いていないか、Cookieが無効。
   // ここでCookieをセットしようとするとエラーになるので、単にnullを返す。
-  if (!deviceId) return null;
+  if (!deviceId){
+    console.warn("⚠️ [Viewer] No deviceId found in cookies"); // ログ: Cookieがない時
+    
+    return null;
+    }
 
   try {
     // まずDBから探す
@@ -25,6 +29,7 @@ export async function getOrCreateViewer() {
 
     return viewer;
   } catch (error) {
+    // 🔴 ここが重要！DB接続エラーなどを捕まえてログに出す
     console.error("Database error in getOrCreateViewer:", error);
     return null;
   }
