@@ -236,3 +236,4 @@ POSTとGETの違い
 ③設計図をSupabaseに反映させる：書き終えた設計図の内容を、実際のSupabaseのデータベースに反映させるためにターミナルを使う。開発中の反映：npx prisma db push　履歴を残す場合：npx prisma migrate dev --name init
 ④VSCodeに新しい項目を教えてあげて、prismaClient（電話回線）を最新にする：npx prisma generate
 ⚫︎prismaClient（電話回線）について：Prisma Clientは、VSCodeとSupabaseを繋ぎ、言葉を翻訳してデータを運ぶ「電話回線」。設計図 (schema.prisma)があった場合、supabase（データの倉庫）が発行したDATABASE_URL（supabaseの住所）を使ってインターネット越しにSupabaseを呼び出し設計図通りに作るように指示（npx prisma migrate dev）。VSCodeに新しい項目を教えてあげて、prismaClient（電話回線）を最新にする（npx prisma generate）
+2026/02/11
