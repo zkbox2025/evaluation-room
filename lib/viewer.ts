@@ -1,19 +1,14 @@
 //サイトに来た人に背番号（Cookie）を渡し、データベースに登録する関数
 import { cookies } from "next/headers";//クッキーを操作するための関数をインポート
 import { prisma } from "@/lib/db";//データベースにアクセスするための道具をインポート
-import { randomUUID } from "crypto";//ランダムなUUIDを生成するための関数をインポート
 
 export async function getOrCreateViewer() {//viewer（訪問者）を取得するか、新しく作成する非同期関数
   const cookieStore = await cookies();//ブラウザに保存されているデータ（Cookie）を取り出す関数を呼び出す
-  let deviceId = cookieStore.get("deviceId")?.value;//deviceId（端末ID）という項目がなくても、エラーにならず undefined を返す
+  const  deviceId = cookieStore.get("deviceId")?.value;//deviceId（端末ID）という名前のクッキーの中身を取り出す
 
-  if (!deviceId) {//deviceId（端末ID）がなければ新しく作る
-    deviceId = randomUUID();//ランダムなUUIDを生成して deviceId（端末ID）に代入する
-    cookieStore.set("deviceId", deviceId, {//ブラウザに deviceId（端末ID）を保存する
-      httpOnly: true,//このクッキーはJavaScriptから盗まれないようにする
-      sameSite: "lax",//（CSRF）対策：同一サイトからのアクセスのみ有効にする
-      path: "/",//サイト全体で有効にする
-    });
+  if (!deviceId) {//deviceId（端末ID）がなければ新しく作成してクッキーに保存する
+  return null;
+    
   }
 
   const viewer =

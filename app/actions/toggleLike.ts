@@ -10,6 +10,8 @@ import { revalidatePath } from "next/cache";
 export async function toggleLike(evaluationId: string, pathToRevalidate: string) {//評価にいいねをつけたり外したりする非同期関数
   const viewer = await getOrCreateViewer();//viewer（訪問者）を取得するか、新しく作成する関数を呼び出す
 
+  if (!viewer) return;//viewer（訪問者）が取得できなければ何もしないで終了する
+
   const existing = await prisma.like.findUnique({//すでにいいねがあるかどうかをデータベースから探す
     where: { viewerId_evaluationId: { viewerId: viewer.id, evaluationId } },//viewerId（訪問者ID）と evaluationId（評価ID）を組み合わせた複合ユニークキーで検索する
   });
