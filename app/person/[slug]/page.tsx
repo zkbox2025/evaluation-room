@@ -20,6 +20,12 @@ export default async function PersonPage({ params }: Props) {//人物の詳細�
 
   // 2. ★ 閲覧者を特定し、その人が「いいね」したデータ入りのリストをDBから取得（いいね済みの配列が入った評価ID（箱）を返す）
   const viewer = await getOrCreateViewer();
+
+  // ★ 追加：もしviewerが取得できなかったら（初回アクセス時など）
+  if (!viewer) {
+  return <p>読み込み中、またはCookieを有効にしてください。</p>;
+  }
+
   const userLikes = await prisma.like.findMany({//viewerId（訪問者ID）を使って、その人が「いいね」した評価データのリストをデータベースから取得
     where: { viewerId: viewer.id },//viewerId（訪問者ID）で絞り込み
     select: { evaluationId: true }, //評価IDという箱（配列入り）だけを取得
