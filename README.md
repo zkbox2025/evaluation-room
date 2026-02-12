@@ -237,3 +237,5 @@ POSTとGETの違い
 ④VSCodeに新しい項目を教えてあげて、prismaClient（電話回線）を最新にする：npx prisma generate
 ⚫︎prismaClient（電話回線）について：Prisma Clientは、VSCodeとSupabaseを繋ぎ、言葉を翻訳してデータを運ぶ「電話回線」。設計図 (schema.prisma)があった場合、supabase（データの倉庫）が発行したDATABASE_URL（supabaseの住所）を使ってインターネット越しにSupabaseを呼び出し設計図通りに作るように指示（npx prisma migrate dev）。VSCodeに新しい項目を教えてあげて、prismaClient（電話回線）を最新にする（npx prisma generate）
 2026/02/11
+
+2026/02/12
