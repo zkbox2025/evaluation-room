@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Viewer {
+  id        String     @id @default(cuid())
+  createdAt DateTime   @default(now())
+  deviceId  String     @unique
+  favorites Favorite[]
+  likes     Like[]
+}
+
+model Like {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  viewerId     String
+  evaluationId String
+  viewer       Viewer   @relation(fields: [viewerId], references: [id])
+
+  @@unique([viewerId, evaluationId])
+  @@index([evaluationId])
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  viewerId   String
+  personSlug String
+  viewer     Viewer   @relation(fields: [viewerId], references: [id])
+
+  @@unique([viewerId, personSlug])
+  @@index([personSlug])
+}
