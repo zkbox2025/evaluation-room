@@ -1,28 +1,17 @@
-import { microcms } from "./microcms";//lib/microcms.tsからmicrosmsだけをここで使えるように持ってきて！
-import { Evaluation } from "@/types/evaluations";//types/evaluations.tsからEvaluationの型だけをここで使えるように持ってきて！
+import { microcms } from "@/infrastructure/microcms/client";//src/infrastructure/microcms/client.tsからmicrosmsだけをここで使えるように持ってきて！
+import type { Evaluation } from "@/domain/entities";//types/evaluations.tsからEvaluationの型だけをここで使えるように持ってきて！
 import { remark } from "remark";//インストール済みのremarkからMarkdownを変換するためのライブラリだけをここで使えるように持ってきて！
 import html from "remark-html";//インストール済みのremark-htmlからremarkと組み合わせてHTMLに出力するライブラリだけをここで使えるように持ってきて！
 import { unstable_cache } from "next/cache";//next/cacheからunstable_cacheだけをここで使えるように持ってきて！
+import { normalizeKind, normalizeFrom } from "@/domain/rules";//domain/rulesからnormalizeKind関数だけをここで使えるように持ってきて！
+import type { EvaluationCMS } from "@/infrastructure/microcms/types";
 
-type PersonRef = {//microCMSのevaluation(エンドポンド)から取得する参照用データ（この評価は誰のものかを示す紐付けデータ）
-  id: string;
-  slug: string;
-};
 
-type EvalCMS = {//microCMSから取得する評価データの型定義
-  id: string;
-  person: PersonRef;
-  from: string;
-  date: string;
-  year?: number;//?がついているプロパティは、データに存在しない場合もある（省略可能）
-  type?: string;//?がついているプロパティは、データに存在しない場合もある（省略可能）
-  content: string;
-};
 
 export async function getLatestEvaluations(limit = 5): Promise<Evaluation[]> {//getLatestEvaluations: 最新の評価を取得する関数を公開
   const cached = unstable_cache(
     async () => {
-      const data = await microcms.getList<EvalCMS>({//microcmsからEvalCMS型のリストを取得
+      const data = await microcms.getList<EvaluationCMS>({//microcmsからEvalCMS型のリストを取得
         endpoint: "evaluations",//microCMSの"evaluations"エンドポイントからデータを取得
         queries: { orders: "-date", limit },//date"（評価の日付）を新しい順に並べ替えて、limitで指定された数（５）だけ取得
       });
@@ -35,15 +24,17 @@ export async function getLatestEvaluations(limit = 5): Promise<Evaluation[]> {//
           return {
             id: e.id,
             personSlug: e.person.slug,
-            from: e.from ?? "不明",//もしe.fromが存在しなければ"不明"を代わりに使う
+            from: normalizeFrom(e.from),//e.fromをnormalizeFrom関数に通して保存
             date: e.date,
             year,
-            type: e.type ?? "quote",//もしe.typeが存在しなければ"quote"を代わりに使う
+            kind: normalizeKind(e.type),//e.typeをnormalizeKind関数に通してkindに変換して保存
             contentHtml: processed.toString(),//HTMLに変換されたcontentを文字列として格納
           };
         })
       );
     },
+
+
     ["evaluations:latest", String(limit)],//microCMSのデータを関数に通して取得した最新の評価リスト（データ）を取得した後に、limit（引数）を含めたキャッシュキーで保存する(limitを変えた場合に保存場所を別にするため)
     { tags: ["evaluations", "evaluations:latest"] }//microCMSのデータを関数に通して取得した最新の評価リスト（データ）をevaluationsとevaluations:latestというタグをつけて一括管理する
   );

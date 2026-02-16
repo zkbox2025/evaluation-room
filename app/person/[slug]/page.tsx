@@ -2,7 +2,7 @@ import { getPerson } from "@/lib/getPerson";//microCMSから人物データを�
 import { getEvaluationsByPerson } from "@/lib/getEvaluationsByPerson";//microCMSからその人物に関する評価データを取得する関数をインポート
 import EvaluationTimeline from "@/components/evaluation/EvaluationTimeline";//評価タイムラインコンポーネントをインポート
 // ★ 追加：データベースと閲覧者を特定するための道具をインポート
-import { prisma } from "@/lib/db";//設計図(schema.prisma)を書き換える際に使うprismaClient（電話回線）がすでにあればそれを使い、なければ新しく作る関数を公開
+import { prisma } from "@/infrastructure/prisma/client";//設計図(schema.prisma)を書き換える際に使うprismaClient（電話回線）がすでにあればそれを使い、なければ新しく作る関数を公開
 import { getOrCreateViewer } from "@/lib/viewer";//viewer（訪問者）を取得するか、新しく作成する関数をインポート
 
 type Props = {//ページコンポーネントのプロパティの型を定義する
@@ -18,16 +18,16 @@ export default async function PersonPage({ params }: Props) {//人物の詳細�
 
   if (!person) return <p>人物が見つかりません</p>;
 
-  // 2. ★ 閲覧者を特定し、その人が「いいね」したデータ入りのリストをDBから取得（いいね済みの配列が入った評価ID（箱）を返す）
+  // 2. ★ deviceIDを使ってviewerオブジェクト（viewerID入り）を取得し閲覧者を特定する関数を呼び出す（なければ新規で作る）
   const viewer = await getOrCreateViewer();
 
-  // ★ 追加：もしviewerが取得できなかったら（初回アクセス時など）
+  // ★ 追加：もしviewerオブジェクトが取得できなかったら（初回アクセス時など）
   if (!viewer) {
   return <p>読み込み中、またはCookieを有効にしてください。</p>;
   }
 
-  const userLikes = await prisma.like.findMany({//viewerId（訪問者ID）を使って、その人が「いいね」した評価データのリストをデータベースから取得
-    where: { viewerId: viewer.id },//viewerId（訪問者ID）で絞り込み
+  const userLikes = await prisma.like.findMany({//viewerIdを使って、その人が「いいね」した評価データのリストをデータベース(supabase)から取得（いいね済みの配列が入った評価ID（箱）を返す）
+    where: { viewerId: viewer.id },//viewerIdで絞り込み
     select: { evaluationId: true }, //評価IDという箱（配列入り）だけを取得
   });
 

@@ -1,10 +1,1 @@
-export type Evaluation = {
-  id: string; 
-  personSlug: string;
-  from: string;
-  date: string;       
-  year: number;
-  type: string;
-  contentHtml: string; 
-  isLiked?: boolean; // ★ これを追加（任意項目にする）
-};
+export type { Evaluation } from "@/domain/entities";//住所変更したけど、旧住所にも転送届を出しておく

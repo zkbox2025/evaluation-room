@@ -1,4 +1,4 @@
-import { Evaluation } from "@/types/evaluations";
+import type { Evaluation } from "@/domain/entities";///types/evaluationsからEvaluationの型だけをここで使えるように持ってきて！
 import { groupEvaluationsByYear } from "@/utils/groupEvaluationsByYear";
 import { EvaluationList } from "@/components/evaluation/EvaluationList";
 

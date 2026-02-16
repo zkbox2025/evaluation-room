@@ -1,6 +1,1 @@
-import { createClient } from "microcms-js-sdk";
-
-export const microcms = createClient({
-  serviceDomain: process.env.MICROCMS_SERVICE_DOMAIN!,
-  apiKey: process.env.MICROCMS_API_KEY!,
-});
+export { microcms } from "@/infrastructure/microcms/client";//住所変更したけど、旧住所にも転送届を出しておく

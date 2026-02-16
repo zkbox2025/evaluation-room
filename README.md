@@ -132,6 +132,10 @@ type: "quote"
 - inoue-naoya.md
 - mike-tyson.md
 
+## 失敗ログはこちら
+EVELUATIONROOM/docs/troubleshooting.md
+
+
 ## 日々の気づきとメモ (Development Log)
 2026/01/23
 ⚫︎Vercelのプロダクションブランチが異なるブランチにGitプッシュした場合、Vercelはデプロイされない
@@ -170,9 +174,8 @@ HeadlessCMSのまとめ
 ⚫︎受信側のチェックの場合：webhookのURLに&debug=1を付け加える→ターミナルでcurl -X POSTする（「お掃除命令」）→ターミナルで返ってきたdebug詳細を読む{"revalidated": true, "debug": {...}} →本番環境を開く（https://evaluation-room.vercel.app）→反映を確認→Vercelの管理画面（Logs）で新しいページを作ったログを確認。
 ⚫︎送信側のチェックの場合：microCMSを更新する→Webhook.site経由で送信ログを見る。
 タグ（Tag）ベースの再検証: 特定のグループ（例：people）だけ新しいグループ情報をとりに行く（スラッグをつけてピンポイント更新も行える）。主にトップページの更新（人物一覧の更新）の際に必要。
+⚫︎ブラウザのチェックの場合：本番環境（https://evaluation-room.vercel.app）を開く→Mac: ⌥ Option + ⌘ Command + I　→　Console：JavaScriptエラー、ログが書かれており、Network：API通信（/api/...）のリクエスト/レスポンスが書かれている
 パス（Path）ベースの再検証: 特定のURL（例：/person/suzuki）を新しく作り直す。主に個人ページの生成に必要。
-
-
 
 
 2026/01/28
@@ -236,6 +239,17 @@ POSTとGETの違い
 ③設計図をSupabaseに反映させる：書き終えた設計図の内容を、実際のSupabaseのデータベースに反映させるためにターミナルを使う。開発中の反映：npx prisma db push　履歴を残す場合：npx prisma migrate dev --name init
 ④VSCodeに新しい項目を教えてあげて、prismaClient（電話回線）を最新にする：npx prisma generate
 ⚫︎prismaClient（電話回線）について：Prisma Clientは、VSCodeとSupabaseを繋ぎ、言葉を翻訳してデータを運ぶ「電話回線」。設計図 (schema.prisma)があった場合、supabase（データの倉庫）が発行したDATABASE_URL（supabaseの住所）を使ってインターネット越しにSupabaseを呼び出し設計図通りに作るように指示（npx prisma migrate dev）。VSCodeに新しい項目を教えてあげて、prismaClient（電話回線）を最新にする（npx prisma generate）
-2026/02/11
-
-2026/02/12
+2026/02/13
+⚫︎supabaseにはリアルタイム機能があり、ブラウザとDBを直接つなぎ、データが変わった瞬間に画面を書き換えることができる（この場合はVercelのキャッシュや再検証という概念を通らず、ブラウザ上で直接更新を検知する）
+⭐️deviceId (クッキー): ブラウザに保存されている「外向きのID」。UUID（例: 550e8400-e29b...）のような文字列。
+⭐️viewerId (DBのID): Supabaseの Viewer テーブルで管理される「内向きの管理番号」。通常は数値（1, 2, 3...）やDB専用のIDです。
+⚫︎オブジェクト（Object）：データ（属性）と、そのデータを操作する手続き（メソッド、処理）をひとまとめにした「物（モノ）」のこと
+⚫︎いいね機能について【まとめ】
+①表示について：サイトに誰か（閲覧者）がアクセスしたらまずはミドルウェアが動いてdeviceID(端末ID)があるか（なければ発行）確認する。deviceIDがある状態で個人ページにアクセスすると、PersonPage関数が起動して、URLからSlugを取り出して（誰の評価ページなのか特定できる）getPersonやgetEvaluationsByPersonでslugを引数としてmicroCMSから個人データや個人の評価データを戻り値として受け取ったり、getOrCreateViewer関数を使ってprismaからdeviceIDによって検索したviewerオブジェクト（viewerID入り）を取得し、prisma.like.findManyででviewerIDに紐づいたいいね済み評価ID（配列いり）を取得し、 new Set(userLikes.map((l) => l.evaluationId)で使いやすいように評価IDの中の配列を整理して、const evaluationsWithLikeStatus = evaluations.map((e) => (で、microCMSで取得した個人の評価データとsupabaseから取得した配列整えた版のいいね済み評価IDを合体させた上で、EvaluationTimelineの関数で最新順にいいね済み個人評価データを表示する。
+②いいねを押した後について：app/actions/toggleLike.tsのtoggleLike関数によって、prismaを使ってsupabaseの書き換えが行われ、revalidatePathがPersonPageを閲覧者にはわからないように再実行（レンダリング）して表示する。ページ全体を再読み込みするのではなく、今の画面を維持したまま「いいね」のところだけが変わる。
+2026/02/14
+⚫︎マッパー (Mapper)：異なる形式のデータを、別の形式に対応（マッピング）させて変換する翻訳者。例えばO/Rマッパー (ORM): データベースの「テーブル」のデータを、プログラミング言語の「オブジェクト」に自動で変換する（prismaなど）。
+⚫︎ラッパー (Wrapper)：既存のプログラムを外側から包み込み（ラップし）、別の新しい窓口（インターフェース）を提供する。中身（元の機能）は変えず、外側の形だけを変えて使い勝手を良くすること。
+⚫︎VM：仮想マシン（Virtual Machine）
+⚫︎src/domain/rules.ts：正規化・制約（kind, from, category など）
+⚫︎src/viewmodels/*：表示用加工（dateLabel, UI用整形）
