@@ -14,6 +14,13 @@ export default async function Home() {
 <p className="mt-4 text-center text-sm text-gray-500">
   people: {people.length} / latest: {latest.length}
 </p>
+<Link
+  href="/favorites"
+  className="inline-block mt-6 text-sm text-blue-600 underline"
+>
+  ⭐️お気に入りを見る
+</Link>
+
 
 
         {/* ① 最新評価 */}
