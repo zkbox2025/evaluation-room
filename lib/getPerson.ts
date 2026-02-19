@@ -9,7 +9,7 @@ export const getPeople = unstable_cache(
   async (): Promise<Person[]> => {
     const data = await microcms.getList<PersonCMS>({
       endpoint: "people",
-      queries: { limit: 100 },
+      queries: { limit: 100, depth: 2 },
     });
 
     return data.contents.map(toDomainPerson);
