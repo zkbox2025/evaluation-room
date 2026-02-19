@@ -65,6 +65,7 @@ const latestLikedSet = new Set(latestLikeRows.map((l) => l.evaluationId));
   const likedEvaluations = await getEvaluationsByIds(likedIds); // microCMSから本文等を引く
   const recentLiked = likedEvaluations.slice(0, 5);
 
+
   return (
     <main className="min-h-screen bg-[#f6f4ee] flex justify-center">
       <div className="max-w-6xl w-full px-8 py-20">
@@ -170,31 +171,48 @@ const latestLikedSet = new Set(latestLikeRows.map((l) => l.evaluationId));
               </div>
             </section>
 
-            {/* ② ジャンル別人物 */}
-            <section className="mt-20 space-y-12">
-              {Object.entries(grouped).map(([category, persons]) => (
-                <div key={category}>
-                  <h2 className="text-xl font-semibold mb-4">{category}</h2>
+           {/* ② ジャンル別人物 */}
+<section className="mt-20 space-y-12">
+  {Object.entries(grouped).map(([categoryName, persons]) => {
+    // ★ここが本当に slug になってるかが命
+    const categorySlug = persons[0]?.category?.slug ?? "uncategorized";
 
-                  <div className="grid grid-cols-2 gap-4">
-                    {persons.map((p) => (
-                      <div key={p.slug} className="bg-white p-4 rounded-lg">
-                        <div className="flex items-center justify-between gap-2">
-                          <Link href={`/person/${p.slug}`} className="font-semibold">
-                            {p.name}
-                          </Link>
+      // ★ 追加：name昇順に並び替え（元配列を壊さないようにコピーしてsort）
+  const sortedPersons = [...persons].sort((a, b) =>
+    a.name.localeCompare(b.name, "ja")
+  );
 
-                          <FavoriteButton
-                            personSlug={p.slug}
-                            initialIsFavorited={favoritedSlugs.has(p.slug)}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </section>
+    return (
+      <div key={categoryName}>
+        <Link
+          href={`/category/${categorySlug}`}
+          className="text-xl font-semibold mb-4 inline-block hover:underline"
+        >
+          {categoryName}
+        </Link>
+
+        <div className="grid grid-cols-2 gap-4">
+          {sortedPersons.map((p) => (
+            <div key={p.slug} className="bg-white p-4 rounded-lg">
+              <div className="flex items-center justify-between gap-2">
+                <Link href={`/person/${p.slug}`} className="font-semibold">
+                  {p.name}
+                </Link>
+
+                <FavoriteButton
+                  personSlug={p.slug}
+                  initialIsFavorited={favoritedSlugs.has(p.slug)}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  })}
+</section>
+
+
           </main>
 
         
