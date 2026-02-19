@@ -1,4 +1,4 @@
-import { Evaluation } from "@/types/evaluations";
+import type { Evaluation } from "@/domain/entities";///types/evaluationsからEvaluationの型だけをここで使えるように持ってきて！
 import { LikeButton } from "./LikeButton";//いいねボタンのコンポーネント（UIの部品）およびプロパティ（色や形の指示書）に関する関数を呼び出す
 
 

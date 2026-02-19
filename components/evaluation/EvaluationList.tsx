@@ -1,4 +1,4 @@
-import { Evaluation } from "@/types/evaluations";
+import type { Evaluation } from "@/domain/entities";///types/evaluationsからEvaluationの型だけをここで使えるように持ってきて！
 import { EvaluationCard } from "./EvaluationCard";
 
 type Props = {//受け取るデータである評価リストのコンポーネント（UIの部品）のプロパティ（色や形の指示書）の型を定義する

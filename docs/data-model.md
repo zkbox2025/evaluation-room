@@ -1,0 +1,1 @@
+DBは viewer/like/favorite のみ。schema.prismaに書かれてあるlikeのevaluationIdは、microCMS の evaluation のコンテンツIDでfavoriteに書かれてあるpersonSlugは、microCMSのpersonのslug。

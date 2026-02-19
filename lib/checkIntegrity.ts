@@ -1,18 +1,7 @@
 //checkIntegrity.ts　microCMSのデータが壊れてないかの点検する関数
-import { microcms } from "./microcms";
+import { microcms } from "@/infrastructure/microcms/client";//src/infrastructure/microcms/client.tsからmicrosmsだけをここで使えるように持ってきて！
+import type { PersonCMS, EvaluationCMS } from "@/infrastructure/microcms/types";
 
-type PeopleCMS = {
-  id: string;
-  slug: string;
-  name?: string;
-};
-
-type EvalCMS = {
-  id: string;
-  from?: string;
-  date?: string;
-  person?: string | { id: string; slug?: string };
-};
 
 async function fetchAll<T>(endpoint: string): Promise<T[]> {//データを全部取ってくるまで繰り返す処理
   const all: T[] = [];//最終的に返すための空の配列
@@ -34,21 +23,20 @@ async function fetchAll<T>(endpoint: string): Promise<T[]> {//データを全部
   return all;
 }
 
-function pickRefId(person: EvalCMS["person"]): string | undefined {//evaluationのperson参照からIDを取り出す関数
-  if (!person) return undefined;//personが存在しない場合はundefinedを返す
-  if (typeof person === "string") return person;//personが文字列型（IDそのもの）であればそれを返す
-  if (typeof person === "object" && typeof person.id === "string") return person.id;//personがオブジェクト型であり、その中のidが文字列型であればそのidを返す
-  return undefined;//それ以外の場合はundefinedを返す
+function pickRefId(person: EvaluationCMS["person"]): string | undefined {//evaluationのperson参照からIDを取り出す関数
+  // person は { id: string, slug: string } のはずなので、id を取るだけでOK
+  return person?.id;
 }
 
 export async function checkCMSIntegrity() {//microCMSのデータが壊れてないかチェックを行う関数
-  const people = await fetchAll<PeopleCMS>("people");//peopleエンドポイントから全員分の人物データを取得
-  const evaluations = await fetchAll<EvalCMS>("evaluations");//evaluationsエンドポイントから全ての評価データを取得
+  const people = await fetchAll<PersonCMS>("people");//peopleエンドポイントから全員分の人物データを取得
+  const evaluations = await fetchAll<EvaluationCMS>("evaluations");//evaluationsエンドポイントから全ての評価データを取得
 
   const peopleIdSet = new Set(people.map((p) => p.id));//peopleのID一覧をSetにして高速検索できるようにする
-  const peopleSlugSet = new Set(people.map((p) => p.slug));//peopleのslug一覧をSetにして高速検索できるようにする
+  
 
   // チェック項目一覧
+  
 
   // ① people の slug 重複チェック（事故りやすい）
   const slugCount = new Map<string, number>();//スラッグ（URLの名前）とそれが何回出たかを数えるslugCountマップ
@@ -101,7 +89,7 @@ export async function checkCMSIntegrity() {//microCMSのデータが壊れてな
       missingPersonRefs,//参照が壊れている評価データのリスト
       invalidPeopleSlugs,//フォーマットが不正なslugのリスト
       // 参考：slug一覧（必要なら）
-      peopleSlugs: Array.from(peopleSlugSet).sort(),//peopleのslug一覧を配列に変換してソートしたもの
+      peopleSlugs: people.map((p) => p.slug).sort(),//peopleのslug一覧を配列に変換してソートしたもの
     },
   };
 }

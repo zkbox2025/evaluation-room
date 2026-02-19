@@ -1,4 +1,4 @@
-import { Evaluation } from "@/types/evaluations";
+import type { Evaluation } from "@/domain/entities";
 
 export function groupEvaluationsByYear(
   evaluations: Evaluation[]

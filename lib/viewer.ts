@@ -1,10 +1,10 @@
 // lib/viewer.ts
 import { cookies } from "next/headers";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/infrastructure/prisma/client";
 
-export async function getOrCreateViewer() {
-  const cookieStore = await cookies();
-  const deviceId = cookieStore.get("deviceId")?.value;
+export async function getOrCreateViewer() {//viewer（訪問者）を取得するか、新しく作成する関数を公開
+  const cookieStore = await cookies();//クッキーの入れ物を開ける
+  const deviceId = cookieStore.get("deviceId")?.value;//クッキーの中からdeviceId（端末ID）を取り出す
 
   // deviceIdがない場合は、Middlewareがまだ動いていないか、Cookieが無効。
   // ここでCookieをセットしようとするとエラーになるので、単にnullを返す。
@@ -16,18 +16,18 @@ export async function getOrCreateViewer() {
 
   try {
     // まずDBから探す
-    let viewer = await prisma.viewer.findUnique({
-      where: { deviceId },
+    let viewer = await prisma.viewer.findUnique({// deviceIdを使ってviewerオブジェクト（viewerID入り）をデータベース（supabase）から探す
+      where: { deviceId },//deviceId（端末ID）で絞り込み
     });
 
-    // なければ作成する（DBへの作成自体はページ内でも許可されています）
+    // なければviewerオブジェクト（viewerID入り）を作成する（DBへの作成自体はページ内でも許可されています）
     if (!viewer) {
       viewer = await prisma.viewer.create({
         data: { deviceId },
       });
     }
 
-    return viewer;
+    return viewer;//viewerオブジェクト（viewerID入り）を返す
   } catch (error) {
     // 🔴 ここが重要！DB接続エラーなどを捕まえてログに出す
     console.error("Database error in getOrCreateViewer:", error);

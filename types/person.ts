@@ -1,7 +1,1 @@
-export type Person = {
-  id?: string;       
-  slug: string;
-  name: string;
-  category: string;
-  description: string;
-};
+export type { Person } from "@/domain/entities";//住所変更したけど、旧住所にも転送届を出しておく
