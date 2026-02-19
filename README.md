@@ -253,3 +253,5 @@ POSTとGETの違い
 ⚫︎VM：仮想マシン（Virtual Machine）
 ⚫︎src/domain/rules.ts：正規化・制約（kind, from, category など）
 ⚫︎src/viewmodels/*：表示用加工（dateLabel, UI用整形）
+2026/02/18
+⚫︎トップページはparamsがない。トップページのURLは常に / だけ。URLが /users/[id] のidの部分がparamsであって、どこも「変数（変わる部分）」になっていないため、プログラムが受け取る params という箱は空っぽ（または存在しない）になる。

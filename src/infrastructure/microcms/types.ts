@@ -10,7 +10,7 @@ export type PersonCMS = {//microCMSから人物情報をPersonCMS として受�
 
 export type PersonRefCMS = {
   id: string;
-  slug: string;
+  slug: PersonSlug;
 };
 
 export type EvaluationCMS = {

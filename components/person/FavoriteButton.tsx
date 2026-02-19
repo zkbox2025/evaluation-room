@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 
 type Props = {
   personSlug: string;
-  initialIsFavorited: boolean;
+  initialIsFavorited: boolean;//お気に入りの初期状態には「はい」か「いいえ」のどちらかしか入らない
 };
 
 export function FavoriteButton({ personSlug, initialIsFavorited }: Props) {

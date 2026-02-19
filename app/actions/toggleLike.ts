@@ -26,5 +26,7 @@ export async function toggleLike(evaluationId: string, pathToRevalidate: string)
 
   // 表示更新したいページを再検証
   revalidatePath(pathToRevalidate);//いいねをつけたり外したりした後に、revalidatePathがPersonpage関数を呼び最新の状態にする（ブラウザへの届け方が普通のアクセスとは違う：変更が必要な「部品のデータ」だけダウンロードし今の画面を維持したまま	変更部分だけ変わる）
+  revalidatePath("/");
+  revalidatePath("/likes");
   //ボタンを押した瞬間に、画面上の「いいね数」などが最新の状態にパッと切り替わるようになる（ページの再読み込みがない）
 }

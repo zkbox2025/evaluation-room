@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getPerson } from "@/lib/getPerson";//microCMSから人物データを取得する関数をインポート
 import { getEvaluationsByPerson } from "@/lib/getEvaluationsByPerson";//microCMSからその人物に関する評価データを取得する関数をインポート
 import EvaluationTimeline from "@/components/evaluation/EvaluationTimeline";//評価タイムラインコンポーネントをインポート
@@ -61,6 +62,9 @@ return (
 
     <p className="mt-4 text-gray-600 leading-relaxed">{person.description}</p>
     <EvaluationTimeline evaluations={evaluationsWithLikeStatus} />
+    <Link className="inline-block mt-10 text-blue-600 underline" href="/">
+        トップへ戻る
+      </Link>
   </main>
 );
 }

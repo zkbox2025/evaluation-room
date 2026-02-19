@@ -22,4 +22,5 @@ export async function toggleFavorite(personSlug: string, pathToRevalidate: strin
 
   revalidatePath(pathToRevalidate);
   revalidatePath("/favorites");
+  revalidatePath("/"); // ★ 追加：トップも更新
 }
