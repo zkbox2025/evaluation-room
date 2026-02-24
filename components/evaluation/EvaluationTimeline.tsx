@@ -7,8 +7,8 @@ type Props = {
 };
 
 export default function EvaluationTimeline({ evaluations }: Props) {
-  const grouped = groupEvaluationsByYear(evaluations);
-  const entries = Object.entries(grouped);
+  const grouped = groupEvaluationsByYear(evaluations);//年ごとに仕分けされた評価データの配列（辞書）を返す関数を使う
+  const entries = Object.entries(grouped);//辞書を配列のセットに変換（mapは「配列」にしか使えないので辞書を回せる形にするため）
 
   return (
     <section className="mt-20">

@@ -5,7 +5,7 @@ import type { EvaluationContentId, PersonSlug } from "@/domain/entities";
 
 export type EvaluationCardVM = {
   id: EvaluationContentId;
-  subject: {
+  subject: {//批評家者の情報
     slug: PersonSlug;
     name: string;
     categoryName: string;

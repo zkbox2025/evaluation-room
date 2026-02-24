@@ -1,19 +1,16 @@
 // app/likes/page.tsx
-import Link from "next/link";
+import Link from "next/link";//ページの切り替えを早くするコンポーネント
 import { prisma } from "@/infrastructure/prisma/client";
-import { getOrCreateViewer } from "@/lib/viewer";
-import { getEvaluationsByIds } from "@/lib/getEvaluationsByIds";
+import { getOrCreateViewer } from "@/lib/viewer";//deviceIDを基にviewer（訪問者）を取得するか、なければ新しく作成する関数をインポートする
+import { getEvaluationsByIds } from "@/lib/getEvaluationsByIds";//microCMSからのEvaluationCMS（評価データ）を取得し呼び出しもとが使いやすいように変換して返す関数
+import { truncateToPlainText } from "@/viewmodels/formatters";
 
-function truncateText(html: string, max = 80) {
-  const text = html.replace(/<[^>]+>/g, "").trim();
-  return text.length > max ? text.slice(0, max) + "…" : text;
-}
 
-export default async function LikesPage() {
-  // 1) viewer（端末）を特定
-  const viewer = await getOrCreateViewer();
+export default async function LikesPage() {//ページ本体
 
-  if (!viewer) {
+  const viewer = await getOrCreateViewer();// 1) viewerIDを特定
+
+  if (!viewer) {//viewerIDがなければページ終了
     return (
       <main className="max-w-3xl mx-auto py-20 px-6">
         <h1 className="text-2xl font-bold">いいね一覧</h1>
@@ -24,16 +21,15 @@ export default async function LikesPage() {
     );
   }
 
-  // 2) DBから、このviewerがいいねした evaluationId 一覧を取得
-  const likes = await prisma.like.findMany({
-    where: { viewerId: viewer.id },
-    select: { evaluationId: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
+  const likes = await prisma.like.findMany({ //2) DBから、このviewerIDがいいねした evaluationId 一覧を取得
+    where: { viewerId: viewer.id },//viewerIDを検索
+    select: { evaluationId: true, createdAt: true },//evaluationIdとcreatedAtを取得
+    orderBy: { createdAt: "desc" },//最新順に並べ替え
   });
 
-  const likedIds = likes.map((l) => l.evaluationId);
+  const likedIds = likes.map((l) => l.evaluationId);//いいね済みeavluationIDのみ集めたIDリストを作成
 
-  // いいねが0件なら
+  // いいねが0件なら終了
   if (likedIds.length === 0) {
     return (
       <main className="max-w-3xl mx-auto py-20 px-6">
@@ -46,12 +42,23 @@ export default async function LikesPage() {
     );
   }
 
-  // 3) microCMSから評価をまとめて取得（本文/人物slugなど）
-  const evaluations = await getEvaluationsByIds(likedIds);
+  // 3) microCMSからevaluation型をまとめて取得（本文/人物slugなど）
+  const evaluations = await getEvaluationsByIds(likedIds);//関数にいいね済みevaluationsIDのみ集めたIDリストを渡していいね済みEvaluation型を受け取る
 
-  // もし microCMS 側から評価が消えた時（DBに残骸が残る）
-  const existingIdSet = new Set(evaluations.map((e) => e.id));
-  const missing = likedIds.filter((id) => !existingIdSet.has(id));
+  //いいねリストには載ってるけど、microCMSから返ってこなかったIDはどれという引き算をする
+  const existingIdSet = new Set(evaluations.map((e) => e.id));//microCMSからとってきたevaluation型（いいね済み評価）からevaluationIDだけのチェックリスト（Set）を作る（一瞬で判定できるように）
+  const missing = likedIds.filter((id) => !existingIdSet.has(id));//ユーザーがいいねしたevaluationID（likedIds）」を1つずつ見て、「チェックリスト（existingIdSet）」に載っていないものだけを抜き出す
+
+// もし参照切れがあったら、DBからもその「いいね」を消しておく
+if (missing.length > 0) {
+  await prisma.like.deleteMany({
+    where: {
+      viewerId: viewer.id,
+      evaluationId: { in: missing },
+    },
+  });
+}
+
 
   return (
     <main className="min-h-screen bg-[#f6f4ee] flex justify-center">
@@ -84,7 +91,7 @@ export default async function LikesPage() {
                 {e.from} / {new Date(e.date).toLocaleDateString("ja-JP")}
               </p>
               <p className="mt-2 text-sm text-gray-800">
-                {truncateText(e.contentHtml, 90)}
+                {truncateToPlainText(e.contentHtml, 90)}
               </p>
               <p className="mt-2 text-xs text-gray-400">
                 → /person/{e.personSlug}

@@ -5,10 +5,11 @@ import html from "remark-html";//インストール済みのremark-htmlからrem
 import { unstable_cache } from "next/cache";//next/cacheからunstable_cacheだけをここで使えるように持ってきて！
 import { normalizeKind, normalizeFrom } from "@/domain/rules";//domain/rulesからnormalizeKind関数だけをここで使えるように持ってきて！
 import type { EvaluationCMS } from "@/infrastructure/microcms/types";
+import { createUnknownPerson } from "@/domain/mappers/person";
 
 
 
-export async function getLatestEvaluations(limit = 5): Promise<Evaluation[]> {//getLatestEvaluations: 最新の評価を取得する関数を公開
+export async function getLatestEvaluations(limit = 5): Promise<Evaluation[]> {//最新の評価を取得する関数を公開
   const cached = unstable_cache(
     async () => {
       const data = await microcms.getList<EvaluationCMS>({//microcmsからEvalCMS型のリストを取得
@@ -23,7 +24,8 @@ export async function getLatestEvaluations(limit = 5): Promise<Evaluation[]> {//
 
           return {
             id: e.id,
-            personSlug: e.person.slug,
+            // e.person が無い場合は、createUnknownPerson で作ったダミーの slug を使う
+            personSlug: e.person?.slug ?? createUnknownPerson("unknown-person").slug,
             from: normalizeFrom(e.from),//e.fromをnormalizeFrom関数に通して保存
             date: e.date,
             year,

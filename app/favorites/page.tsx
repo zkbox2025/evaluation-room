@@ -1,13 +1,13 @@
-import Link from "next/link";
+import Link from "next/link";//ページの切り替えを早くするコンポーネント
 import { prisma } from "@/infrastructure/prisma/client";
-import { getOrCreateViewer } from "@/lib/viewer";
-import { getPeople } from "@/lib/getPerson";
+import { getOrCreateViewer } from "@/lib/viewer";//deviceIDを基にviewer（訪問者）を取得するか、なければ新しく作成する関数をインポートする
+import { getPeople } from "@/lib/getPerson";////microCMSから人物一覧をとってきてPerson型に変換する関数（同じデータを何度も取りに行かないようにキャッシュする）をインポートする
 
-export default async function FavoritesPage() {
+export default async function FavoritesPage() {//ページ全体の関数
   // 1) viewer（端末）を特定
-  const viewer = await getOrCreateViewer();
+  const viewer = await getOrCreateViewer();//viewerIDを取得
 
-  if (!viewer) {
+  if (!viewer) {//クッキーが無効などでviewerIDが取得できない場合は、エラーメッセージで返す。
     return (
       <main className="max-w-3xl mx-auto py-20 px-6">
         <h1 className="text-2xl font-bold">お気に入り</h1>
@@ -19,13 +19,13 @@ export default async function FavoritesPage() {
   }
 
   // 2) DBから、このviewerがお気に入りした personSlug 一覧を取得
-  const favorites = await prisma.favorite.findMany({
-    where: { viewerId: viewer.id },
-    select: { personSlug: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
+  const favorites = await prisma.favorite.findMany({//prismaのfavoriteテーブルから条件に合う行をfindmany(複数とる)する。
+    where: { viewerId: viewer.id },//絞り込み条件（viewerIDで絞り込み）
+    select: { personSlug: true, createdAt: true },//何を取るか
+    orderBy: { createdAt: "desc" },//並び順（新しい順）
   });
 
-  const favoritedSlugs = favorites.map((f) => f.personSlug);
+  const favoritedSlugs = favorites.map((f) => f.personSlug);//お気に入り済みのpersonSlugだけの配列にする
 
   // お気に入りが0件なら
   if (favoritedSlugs.length === 0) {
@@ -40,17 +40,27 @@ export default async function FavoritesPage() {
     );
   }
 
-  // 3) microCMSから人物一覧を取得して slug で突合
-  const people = await getPeople();
-  const peopleBySlug = new Map(people.map((p) => [p.slug, p]));
+  // 3) microCMSから人物一覧を取得して slug でPerson型を検索できる辞書を作る
+  const people = await getPeople();//microCMSから人物一覧（PersonCMS）を取得してPerson型に変換し返す。
+  const peopleBySlug = new Map(people.map((p) => [p.slug, p]));//Person型から「キー：slug,値：Person型」の配列にして（キーで特定できるようにする）辞書を作る。
 
   // 4) DBの順序（createdAt desc）に合わせて人物を並べ替え
   const favoritedPeople = favoritedSlugs
-    .map((slug) => peopleBySlug.get(slug))
-    .filter(Boolean);
+    .map((slug) => peopleBySlug.get(slug))//favoritedSlugs（DBの新しい順のslug配列）を一つ一つPerson（slug）に当てはめる
+    .filter(Boolean);//undefined が取り除かれて [person, person, ...]にする
 
-  // もし microCMS 側から人物が消えたりslugが変わった時（DBに残骸が残るケース）
-  const missing = favoritedSlugs.filter((slug) => !peopleBySlug.has(slug));
+  // もし microCMS 側から人物が消えたりslugが変わった時（DBに残った残骸を集める）
+  const missing = favoritedSlugs.filter((slug) => !peopleBySlug.has(slug));//DBにある slug が microCMS に存在しない＝参照切れにしてslug配列を作ってデバッグ表示に使う
+
+  // もし参照切れがあったら、DBからもその「お気に入り」を消しておく
+if (missing.length > 0) {
+    await prisma.favorite.deleteMany({
+      where: {
+        viewerId: viewer.id,
+        personSlug: { in: missing }, // 見つからなかったslugたちを一気に消す
+      },
+    });
+  }
 
   return (
     <main className="min-h-screen bg-[#f6f4ee] flex justify-center">

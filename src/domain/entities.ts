@@ -12,14 +12,15 @@ export type Viewer = {
 
 };
 
+//カテゴリーのname,slugと人物のname,slugがある
 export type Category = {
-  slug: string;  
-  name: string;   // "エンジニア"
+  slug: string;  //カテゴリー一覧ページ(URL)用のslug（人物slugとは異なる）
+  name: string;   // カテゴリーの名前
 };
 
 export type Person = {
   cmsId: string;   // microCMSのコンテンツID（内部用）
-  slug: PersonSlug;// URL/参照用
+  slug: PersonSlug;// 個別URL/参照用(カテゴリー用とは異なる)
   name: string;
   description: string;
   category: Category; // 型として切り出し、personに含める
