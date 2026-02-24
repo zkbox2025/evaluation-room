@@ -18,7 +18,7 @@ export async function toggleLike(evaluationId: string, pathToRevalidate: string)
 
   if (existing) {//すでにいいねがあれば削除する
     await prisma.like.delete({ where: { id: existing.id } });//いいねを削除する
-  } else { //すでにいいねがなければ新しく作る
+  } else { 
     await prisma.like.create({//そうでなければいいねを新規作成する
       data: { viewerId: viewer.id, evaluationId },//viewerId（訪問者ID）と evaluationId（評価ID）をデータベースに保存する
     });

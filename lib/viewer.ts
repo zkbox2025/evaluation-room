@@ -2,7 +2,7 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/infrastructure/prisma/client";
 
-export async function getOrCreateViewer() {//viewer（訪問者）を取得するか、新しく作成する関数を公開
+export async function getOrCreateViewer() {//deviceIDを基にviewer（訪問者）を取得するか、なければ新しく作成する関数を公開
   const cookieStore = await cookies();//クッキーの入れ物を開ける
   const deviceId = cookieStore.get("deviceId")?.value;//クッキーの中からdeviceId（端末ID）を取り出す
 

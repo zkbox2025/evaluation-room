@@ -7,35 +7,34 @@ import { prisma } from "@/infrastructure/prisma/client";
 import { FavoriteButton } from "@/components/person/FavoriteButton";
 import { getEvaluationsByIds } from "@/lib/getEvaluationsByIds"; 
 import { LikeButton } from "@/components/evaluation/LikeButton";
+import { truncateToPlainText } from "@/viewmodels/formatters";
+import { clipHtml } from "@/viewmodels/formatters";
 
-
-function truncateText(html: string, max = 80) {
-  const text = html.replace(/<[^>]+>/g, "").trim(); // 超簡易でOK
-  return text.length > max ? text.slice(0, max) + "…" : text;
-}
-
-export default async function Home() {
+export default async function Home() {//ページ本体の関数
   // 1) microCMS
-  const people = await getPeople();
-  const grouped = groupPeopleByCategory(people);
-  const latest = await getLatestEvaluations(5);
+  const people = await getPeople();//人物一覧を取得
+  const grouped = groupPeopleByCategory(people);//人物リストをカテゴリーごとにグループ分けする関数にpeople型を入れて整理
+  const latest = await getLatestEvaluations(5);//miceroCMSから最新evaluation型５件を取得する
 
     // 2) viewer（DBの人）
-  const viewer = await getOrCreateViewer();
+  const viewer = await getOrCreateViewer();//deviceIDからviewerIDを取得
 
-  const latestIds = latest.map((e) => e.id);
+  const latestIds = latest.map((e) => e.id);//最新evaluation型（５件）の中からevaluationIDのみを取得
 
-const latestLikeRows = viewer
-  ? await prisma.like.findMany({
+  //最新評価５件のいいねボタンを赤く塗るかどうかの判定をする
+  const latestLikeRows = viewer
+  ? await prisma.like.findMany({//viewerIDを使って最新evaluationID５件の中にいいね済み評価があった場合にそのevaluationIDを取得
       where: { viewerId: viewer.id, evaluationId: { in: latestIds } },
       select: { evaluationId: true },
     })
-  : [];
+  : [];//Viewerがいなければ空
 
-const latestLikedSet = new Set(latestLikeRows.map((l) => l.evaluationId));
+  //検索スピードを爆速にするための準備
+   // トップ最新評価５件で「★状態」を判定するためSet化
+const latestLikedSet = new Set(latestLikeRows.map((l) => l.evaluationId));//最新評価５件の中でViewerがいいねしている評価のevaluationIDだけのチェックリスト（Set）を作る（一瞬で判定するため）
 
 
-  // 3) favorites（サイドバーで使う10件）
+  // 3) favorites（サイドバーで使う最新お気に入り10件をDBからとってくる）
   const favoriteRows = viewer
     ? await prisma.favorite.findMany({
         where: { viewerId: viewer.id },
@@ -45,13 +44,22 @@ const latestLikedSet = new Set(latestLikeRows.map((l) => l.evaluationId));
       })
     : [];
 
-  // トップ人物カード（カテゴリ一覧）で「★状態」を判定するためSet化（全件でもOK）
-  const favoritedSlugs = new Set(favoriteRows.map((f) => f.personSlug));
+  //favorites（カテゴリー一覧で使うお気に入りをDBからとってくる）
+    const allFavoriteSlugsRows = viewer
+  ? await prisma.favorite.findMany({
+      where: { viewerId: viewer.id },
+      select: { personSlug: true }, // slugだけで軽い
+    })
+  : [];
 
-  // slug → person を引く辞書（名前表示用）
+  //検索スピードを爆速にするための準備
+  // トップ人物カード（カテゴリ一覧）で「★状態」を判定するためSet化
+  const favoritedSlugs = new Set(allFavoriteSlugsRows.map((f) => f.personSlug));//viewerがお気に入りにしている人物のpersonSlugだけのチェックリスト（Set）を作る（一瞬で判定するため）
+
+  // slug → person を引く辞書（サイドバー名前表示用）
   const peopleBySlug = new Map(people.map((p) => [p.slug, p]));
 
-  // 4) likes（最近10件 → うち5件表示）
+  // 4) likes（サイドバーで使ういいね評価をDBからとってくる。最近10件 → うち5件表示）
   const likeRows = viewer
     ? await prisma.like.findMany({
         where: { viewerId: viewer.id },
@@ -61,9 +69,9 @@ const latestLikedSet = new Set(latestLikeRows.map((l) => l.evaluationId));
       })
     : [];
 
-  const likedIds = likeRows.map((l) => l.evaluationId);
-  const likedEvaluations = await getEvaluationsByIds(likedIds); // microCMSから本文等を引く
-  const recentLiked = likedEvaluations.slice(0, 5);
+  const likedIds = likeRows.map((l) => l.evaluationId);//最新いいねデータからevaluationIDを抽出
+  const likedEvaluations = await getEvaluationsByIds(likedIds); //microCMSから最新いいね評価のデータを持ってくる（最新いいね評価１０件のevaluationIDを基に）
+  const recentLiked = likedEvaluations.slice(0, 5);//５件表示(サイドバーに)
 
 
   return (
@@ -103,7 +111,7 @@ const latestLikedSet = new Set(latestLikeRows.map((l) => l.evaluationId));
                           {e.from} / {new Date(e.date).toLocaleDateString("ja-JP")}
                         </div>
                         <div className="text-gray-800">
-                          {truncateText(e.contentHtml, 60)}
+                          {truncateToPlainText(e.contentHtml, 60)}
                         </div>
                       </Link>
                     </li>
@@ -127,16 +135,17 @@ const latestLikedSet = new Set(latestLikeRows.map((l) => l.evaluationId));
                 </p>
               ) : (
                 <ul className="mt-3 space-y-2">
-                  {favoriteRows.map((f) => {
-                    const p = peopleBySlug.get(f.personSlug);
+                  {favoriteRows.map((f) => {{/* データを取り出してHTMLに変身させて新しいリストを作る */}
+                    const p = peopleBySlug.get(f.personSlug);{/* スラッグから名前を検索 */}
                     return (
                       <li key={f.personSlug}>
-                        <Link
-                          href={`/person/${f.personSlug}`}
-                          className="text-sm text-gray-800 hover:underline"
-                        >
-                          {p?.name ?? f.personSlug}
-                        </Link>
+                        {p ? (
+                       <Link href={`/person/${f.personSlug}`} className="text-sm text-gray-800 hover:underline">
+                       {p.name}
+                       </Link>
+                       ) : (
+                      <span className="text-sm text-gray-500">不明</span>
+                      )}
                       </li>
                     );
                   })}
@@ -157,7 +166,7 @@ const latestLikedSet = new Set(latestLikeRows.map((l) => l.evaluationId));
   <div key={e.id} className="bg-white p-6 rounded-xl shadow-sm">
     <div
       className="prose prose-neutral max-w-none ..."
-      dangerouslySetInnerHTML={{ __html: e.contentHtml }}
+      dangerouslySetInnerHTML={{ __html: clipHtml(e.contentHtml, 200) }}
     />
     <div className="mt-4 flex items-center justify-between">
       <LikeButton evaluationId={e.id} initialIsLiked={latestLikedSet.has(e.id)} />
@@ -173,6 +182,7 @@ const latestLikedSet = new Set(latestLikeRows.map((l) => l.evaluationId));
 
            {/* ② ジャンル別人物 */}
 <section className="mt-20 space-y-12">
+   {/* microCMSのカテゴリーに登録されてるものを表示 */}
   {Object.entries(grouped).map(([categoryName, persons]) => {
     // ★ここが本当に slug になってるかが命
     const categorySlug = persons[0]?.category?.slug ?? "uncategorized";
