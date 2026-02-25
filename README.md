@@ -245,7 +245,7 @@ POSTとGETの違い
 ⭐️viewerId (DBのID): Supabaseの Viewer テーブルで管理される「内向きの管理番号」。通常は数値（1, 2, 3...）やDB専用のIDです。
 ⚫︎オブジェクト（Object）：データ（属性）と、そのデータを操作する手続き（メソッド、処理）をひとまとめにした「物（モノ）」のこと
 ⚫︎いいね機能について【まとめ】
-①表示について：サイトに誰か（閲覧者）がアクセスしたらまずはミドルウェアが動いてdeviceID(端末ID)があるか（なければ発行）確認する。deviceIDがある状態で個人ページにアクセスすると、PersonPage関数が起動して、URLからSlugを取り出して（誰の評価ページなのか特定できる）getPersonやgetEvaluationsByPersonでslugを引数としてmicroCMSから個人データや個人の評価データを戻り値として受け取ったり、getOrCreateViewer関数を使ってprismaからdeviceIDによって検索したviewerオブジェクト（viewerID入り）を取得し、prisma.like.findManyででviewerIDに紐づいたいいね済み評価ID（配列いり）を取得し、 new Set(userLikes.map((l) => l.evaluationId)で使いやすいように評価IDの中の配列を整理して、const evaluationsWithLikeStatus = evaluations.map((e) => (で、microCMSで取得した個人の評価データとsupabaseから取得した配列整えた版のいいね済み評価IDを合体させた上で、EvaluationTimelineの関数で最新順にいいね済み個人評価データを表示する。
+①表示について：サイトに誰か（閲覧者）がアクセスしたらまずはミドルウェアが動いてdeviceID(端末ID)があるか（なければ発行）確認する。deviceIDがある状態で個人ページにアクセスすると、PersonPage関数が起動して、URLからSlugを取り出して（誰の評価ページなのか特定できる）getPersonやgetEvaluationsByPersonでslugを引数としてmicroCMSから個人データや個人の評価データを戻り値として受け取ったり、getOrCreateViewer関数を使ってprismaからdeviceIDによって検索したviewerオブジェクト（viewerID入り）を取得し、prisma.like.findManyでviewerIDに紐づいたいいね済み評価ID（配列いり）を取得し、 new Set(userLikes.map((l) => l.evaluationId)で使いやすいように評価IDの中の配列を整理して、const evaluationsWithLikeStatus = evaluations.map((e) => (で、microCMSで取得した個人の評価データとsupabaseから取得した配列整えた版のいいね済み評価IDを合体させた上で、EvaluationTimelineの関数で最新順にいいね済み個人評価データを表示する。
 ②いいねを押した後について：app/actions/toggleLike.tsのtoggleLike関数によって、prismaを使ってsupabaseの書き換えが行われ、revalidatePathがPersonPageを閲覧者にはわからないように再実行（レンダリング）して表示する。ページ全体を再読み込みするのではなく、今の画面を維持したまま「いいね」のところだけが変わる。
 2026/02/14
 ⚫︎マッパー (Mapper)：異なる形式のデータを、別の形式に対応（マッピング）させて変換する翻訳者。例えばO/Rマッパー (ORM): データベースの「テーブル」のデータを、プログラミング言語の「オブジェクト」に自動で変換する（prismaなど）。
@@ -259,3 +259,16 @@ POSTとGETの違い
 ⚫︎toggle(トグル):同じ操作でONとOFFを交互に切り替えること
 2026/02/22
 ⚫︎Webhookの使われ方について：Webhookは、何かが起きたら指定したURLに通知を飛ばすというネット上の汎用的な仕組み。Vercel以外にもlocalhost(これは手動リロード)やGithubとも繋がっており自動で更新する。
+2026/02/24
+⚫︎サイドバーの表示（レンダリング：表示ページファイルの最後のreturn）では文字列で返すのが一般的。太文字などをなくすため。最新評価一覧や個人ページの評価ではdangerouslySetInnerHTMLを使用して表示の欄にHTMLで記載する。
+⚫︎従来の検索UXは「一覧からリンクを選ぶ」体験だったが、生成AI時代は「対話を通じて直接解決策を得る」体験へと進化している。
+（体験例）
+AIに質問して、要約された回答を直接受け取る。
+ユーザーの意図や文脈に合わせた回答が生成される
+AIが間違いを指摘したり、改善案を出して並走してくれる
+ユーザーがAIを使って評価の部屋の言葉に対して、どんな背景があったの？とか認めた革新部分は何？とか時代を経て再度評価した二人の関係性の物語化とかもしも〇〇が✖️✖️したらとかそういう遊び方がある。その質問と回答の記録をDBに保存する。
+2026/02/25
+⚫︎model AiGeneration { ... }：AI生成記録というユーザー体験記録のDBテーブル
+⚫︎@id：この項目を、このテーブルの『背番号（主キー）』にする
+⚫︎@default(cuid())：データが作られるとき、ランダムで被らないID（CUID）を自動で発行
+⚫︎@default(now())：データが保存された瞬間の『日本時間（または世界標準時）』を自動で入力

@@ -4,3 +4,10 @@
 ⚫︎src/viewmodels/evaluationCard.mapper.tsにある関数をトップページと個人ページにインポートして使う予定
 ⚫︎src/domain/relations.ts（Like/Favorite など関係）で公開されているtype（EvaluationLikeとPersonFavorite）がまだ使われてないのでどこかでインポートして使う予定
 ⚫︎トップページの最新評価の右下に評価者の名前を入れるのと文字をクリックして個人ページに飛べるようにする予定（今は左下のURLをクリックしたら飛べるようになってる）
+⚫︎「参照切れ掃除」用の軽い管理テーブル or ログを導入予定。いま likes/favorites は microCMS の削除・slug変更で残骸が残る設計。これは自然。ただAIフェーズに入るとイベント増えるので、運用としては以下のどれかがあると良い。
+⭐️BrokenRefLog（参照切れ検知したら保存）
+⭐️admin endpoint（今は作らないでもOK）
+⭐️cron/手動で掃除するスクリプト（Prismaで一発）
+「入れておくと安心」枠だけど、必須ではない。
+⚫︎アプリ実行時（VercelなどにDBをデプロイ（公開）するなど）の直前に5432（末尾を/postgres）に切り替える.。
+⚫︎Prisma 7の最新方針では、schema.prisma の中に url = ... と書くこと自体が禁止

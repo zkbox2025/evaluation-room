@@ -6,13 +6,43 @@ datasource db {
   provider = "postgresql"
 }
 
+
+
 model Viewer {
   id        String     @id @default(cuid())
   createdAt DateTime   @default(now())
   deviceId  String     @unique
   favorites Favorite[]
   likes     Like[]
+  aiGenerations AiGeneration[] // ★追加
 }
+
+model AiGeneration {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+
+  viewerId      String
+  personSlug    String
+
+  prompt        String   @db.Text
+  resultText    String   @db.Text
+
+  model         String
+  status        String   // "success" | "error"（まずは文字列でOK）
+  errorMessage  String?  @db.Text
+
+  tokensInput   Int?
+  tokensOutput  Int?
+
+  // 料金を小数で持つと誤差が出るので、最初は整数で（例: micro USD）
+  costUsdMicro  Int?
+
+  viewer        Viewer   @relation(fields: [viewerId], references: [id])
+
+  @@index([viewerId, createdAt(sort: Desc)])
+  @@index([personSlug, createdAt(sort: Desc)])
+  @@index([viewerId, personSlug, createdAt(sort: Desc)])
+  }
 
 model Like {
   id           String   @id @default(cuid())
