@@ -65,3 +65,9 @@ model Favorite {
   @@unique([viewerId, personSlug])
   @@index([personSlug])
 }
+
+// テスト後に消せばOK
+model MigrationTest {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+}

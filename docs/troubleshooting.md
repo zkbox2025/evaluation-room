@@ -241,7 +241,7 @@ Prisma 7（最新） の config では、CLIが参照するのは datasource.url
 **再発防止（Prevention）**
 ⭐️prisma.config.ts の最小例
 import "dotenv/config"; // これが重要！
-import { defineConfig , env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",//スキーマファイル（設計図）の保存場所を指定
@@ -249,7 +249,7 @@ export default defineConfig({
     path: "prisma/migrations",//マイグレーションファイル（prismaで翻訳した後の設計図：SQL版）の保存場所を指定
   },
   datasource: {
-    url: env("DATABASE_URL"), //URLの確認先
+    url: process.env.DATABASE_URL, //URLの確認先
 
   },
 });
