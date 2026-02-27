@@ -192,7 +192,7 @@ const { slug } = await params;
 2.「npx prisma migrate dev」をターミナルで行う
 3.❶接続先のサーバー名（ホスト）が空っぽだというエラーメッセージが出た。
   ❷schema.prisma に url が書いてある限り、Prisma 7 はそれを拒否するというメッセージが出た
-  ❸prisma.config.ts の中で参照している DIRECT_URL（5432番ポート/直結用） という環境変数が、あなたの .env ファイルに定義されていないというエラーメッセージが出た
+  ❸prisma5で実行したところprisma.config.ts の中で参照している DIRECT_URL（5432番ポート/直結用） という環境変数が、あなたの .env ファイルに定義されていないというエラーメッセージが出た。
 
 **エラーメッセージ / ログ**
 - ❶Error: P1013: The provided database string is invalid. empty host in database URL.
@@ -212,21 +212,30 @@ const { slug } = await params;
 **結論**
 - ❶ prisma.config.tsのdatasource: { url: env("DIRECT_URL（）"),} （←URL確認先）というコードの意味まで理解しておらず、.envという何もコードが書かれていないファイルにprismaが確認しに行っていたのがオチ。それと、DIRECT_URL（5432番ポート/直結用）に不適切な文字（＠://）が混ざっているのはAIに聞いた回答をそのままコピペする際によくあるのでDIRECT_URL（5432番ポート/直結用）のコピペには注意が必要。
 - ❷2025年11月からPrisma 7になり、このプロジェクトではprisma.config.ts での管理が必須になった。AIがいまだにschema.prisma 内に url を直接書くのを進めることがあるので注意が必要。
-- ❸DIRECT_URL（5432番ポート/直結用）の意味を理解していなかった。# アプリ実行用（Vercel（本番環境）などにDBをデプロイ（公開）するなど）（npx prisma migrate deploy）# マイグレーション用（更新したschema.prismaをDB（supabase）上に書き換えをお願いするとき）（npx prisma migrate dev）に必要なDIRECT_URL（5432番ポート/直結用）はDB設計には必須。もう忘れない。
+- ❸まず、GitHub Actionsで自動適用の設定をする（GitHub に Secrets を登録＋リポジトリにworkflowのファイルを作る）と、ローカルでmigrate devしてprisma/migrationsを作る（DBに反映）して、Githubへプッシュすると、自動でnpx prisma migrate deployしてくれる（GitHubがpush をトリガーに workflow を起動して、workflow の中で npx prisma migrate deployを行い、本番DB（Supabase）が作成したprisma/migrationsにマイグレーションされる。）。この設定の方が長期的にみて楽。
+Prisma 7（最新） の config では、CLIが参照するのは datasource.url 1本。configにはdatasource: {url: env("DATABASE_URL")}と書くこと（DATABASE_URLをみに行くように）。さらに、Prisma 7では「どのURLを参照するか」を env で切り替える運用が一番現実的。
+
+【※prisma6：旧版】
+# アプリ実行用（Vercel（本番環境）などにDBをデプロイ（公開）するなど）（npx prisma migrate deploy）# マイグレーション用（更新したschema.prismaをDB（supabase）上に書き換えをお願いするとき）（npx prisma migrate dev）に必要なDIRECT_URL（5432番ポート/直結用）はDB設計には必須。
+
 
 **解決策（Fix）**
 - ❶AIの回答したDIRECT_URL（5432番ポート/直結用）に＠://があったので消す（末尾に:5432/postgresの入れ忘れにも注意）
 - ❷schema.prisma に url は書かずにprisma.config.tsにかく。AIが勧めてきても聞き返すこと！
-- ❸環境変数として.envとVercelにDIRECT_URL（5432番ポート/直結用）を設定
+- ❸prisma6より前の改訂前のバージョンでやるなら環境変数として.envとVercelにDIRECT_URL（5432番ポート/直結用）を設定。ただ、GitHub Actionsで自動適用をするべき。
 
 **確認（動作検証）**
 - 「npx prisma migrate dev」をターミナルで行い、「Your database is now in sync with your migration history」と表示される。
 - SupabaseのTable Editorで テーブル が増えている
 
 **よくある落とし穴**
+⚫︎DATABASE_URLは三つある。同じ名前でも別物。
+① VercelのDATABASE_URL（アプリ実行時用）に置く DATABASE_URL（＝6543（プール））と
+② GitHub Actionsのsecrets（本番DBにprisma migrations（SQLファイル：履歴）を流し込む：migrate deploy実行時）に置く DATABASE_URL（＝5432（直結）難しければ6543）と
+③ ローカルの .env（schema.prismaをDBに流し込んでprisma migrations（SQLファイル：その履歴）を作成する）を置く　DATABASE_URL（＝5432（ローカル））がある(Docker Desktopをインストールすること)
 ⚫︎読み込みの優先順位　①.env ②.env.local 
-⚫︎Vercel は DATABASE_URL と DIRECT_URL 両方必要な場合がある
-⚫︎pooler（6543）と direct（5432）を取り違える
+⚫︎pooler（6543）と direct（5432）を取り違える（アプリ実行はpooler（6543）で direct（5432）はmigrate を安定させるために推奨）
+
 
 
 **再発防止（Prevention）**
@@ -240,18 +249,15 @@ export default defineConfig({
     path: "prisma/migrations",//マイグレーションファイル（prismaで翻訳した後の設計図：SQL版）の保存場所を指定
   },
   datasource: {
-    url: env("DIRECT_URL"), //URLの確認先
+    url: env("DATABASE_URL"), //URLの確認先
 
   },
 });
 
 ⭐️.env の最小例
-#　データの取得・追加・更新・削除（CRUD操作）は全てこれを経由して行われる（軽量版）
-DATABASE_URL="postgresql://postgres.lncaitryhrdnmndgaorl:・・・@aws-1-ap-south-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
-
-# アプリ実行用（Vercel（本番環境）などにDBをデプロイ（公開）するなど）（npx prisma migrate deploy）
 # マイグレーション用（更新したschema.prismaをDB（supabase）上に書き換えをお願いするとき）（npx prisma migrate dev）
-DIRECT_URL="postgresql://postgres:・・・@db.lncaitryhrdnmndgaorl.supabase.co:5432/postgres"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/app_dev?schema=public"
+
 
 ⭐️schema.prismaのdatasource dbの最小例
 datasource db {
