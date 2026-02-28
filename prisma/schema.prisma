@@ -70,5 +70,6 @@ model Favorite {
 model MigrationTest {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  note      String?  // ←追加
+  note      String?  
+  status    String  @default("draft") // ←追加（例）
 }
