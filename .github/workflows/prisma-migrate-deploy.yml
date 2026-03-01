@@ -1,12 +1,13 @@
-name: prisma-migrate-deploy
+name: prisma-schema-check
 
 on:
-  push:
+  pull_request:
     branches: [ main ]
 
 jobs:
-  migrate:
+  inspect:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -21,10 +22,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Prisma 7: prisma.config.ts が env("DATABASE_URL") を参照している前提
-      - name: Run prisma migrate deploy
+      # 1. スキーマファイルの構文・定義チェック（DB接続不要）
+      - name: Prisma validate
+        run: npx prisma validate
+
+      # 2. 型定義の生成チェック（プロジェクトの整合性確認）
+      - name: Prisma generate
+        run: npx prisma generate
+
+      # 3. DBとのズレがないか確認（参照のみ・変更はしない）
+      # DB接続が必要なため、secrets.DATABASE_URL を使用
+      - name: Prisma migrate diff check
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          npx prisma generate
-          npx prisma migrate deploy
+          npx prisma migrate diff \
+            --from-schema-datamodel prisma/schema.prisma \
+            --to-schema-datasource prisma/schema.prisma \
+            --exit-code
+
+      # 4. アプリケーションのテスト
+      - name: Run tests
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm test
