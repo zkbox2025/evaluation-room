@@ -9,7 +9,7 @@ export default defineConfig({
     path: "prisma/migrations",//マイグレーションファイル（prismaで翻訳した後の設計図：SQL版）の保存場所を指定
   },
   datasource: {
-    url: process.env.DATABASE_URL, //URLの確認先
+    url: process.env.DATABASE_URL ?? "", //npx prisma migrate devの時のURLの確認先
 
   },
 });
