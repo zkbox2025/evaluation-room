@@ -24,4 +24,7 @@ jobs:
         run: npm run lint
 
       - name: Build
+        env:
+          MICROCMS_SERVICE_DOMAIN: ${{ secrets.MICROCMS_SERVICE_DOMAIN }}
+          MICROCMS_API_KEY: ${{ secrets.MICROCMS_API_KEY }}
         run: npm run build
