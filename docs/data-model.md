@@ -11,3 +11,5 @@
 「入れておくと安心」枠だけど、必須ではない。
 ⚫︎アプリ実行時（VercelなどにDBをデプロイ（公開）するなど）の直前に5432（末尾を/postgres）に切り替える.。
 ⚫︎Prisma 7の最新方針では、schema.prisma の中に url = ... と書くこと自体が禁止
+⚫︎PR時はDB不要の軽量チェック（validate/build等）に徹し、本番への反映はローカルから（npx prisma migrate dev）を手動実行して確実性を担保する。接続トラブルを防ぐため、本番用には IPv4対応のPooler（6543番） を使い、.env と .env.prod を分離して誤操作のリスクを排除する。「開発はdev（.env）、本番はdeploy(.env.prod)」の原則を守り、GitHub Actionsにタイムアウトを設定することで、ハングアップによるリソース浪費を防止する。
+⚫︎prisma-schema-check.ymlは、schema.prismaをgithubのブランチにプッシュし、メインにマージする前のPR(申請)の段階でGitHub Actionsがチェックする項目が書かれている。

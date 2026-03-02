@@ -177,15 +177,15 @@ const { slug } = await params;
 
 ---
 
-### [2026-02-25] [schema.prismaをマイグレーションできない（DBにテーブルが反映されない）]
+### [2026-02-25] [schema.prismaを開発用DBにマイグレーションできない（DBにテーブルが反映されない）]
 
 **影響範囲**
 - 発生環境：Prisma 7
 - 緊急度：中
 
 **症状**
-- 何が起きたか：schema.prismaにAiGenerationのテーブルを追加してDB（supabase）側にマイグレーションしようとしたが、ターミナルでエラー表示が出て作成できない。
-- 期待していた動作：DB（supabase）側にAiGenerationのテーブルをマイグレーション。
+- 何が起きたか：schema.prismaにAiGenerationのテーブルを追加して開発用DB側にマイグレーションしようとしたが、ターミナルでエラー表示が出て作成できない。
+- 期待していた動作：開発用DB側にAiGenerationのテーブルをマイグレーション。
 
 **再現手順**
 1.schema.prismaにAiGenerationのテーブルを追加
@@ -212,7 +212,7 @@ const { slug } = await params;
 **結論**
 - ❶ prisma.config.tsのdatasource: { url: env("DIRECT_URL（）"),} （←URL確認先）というコードの意味まで理解しておらず、.envという何もコードが書かれていないファイルにprismaが確認しに行っていたのがオチ。それと、DIRECT_URL（5432番ポート/直結用）に不適切な文字（＠://）が混ざっているのはAIに聞いた回答をそのままコピペする際によくあるのでDIRECT_URL（5432番ポート/直結用）のコピペには注意が必要。
 - ❷2025年11月からPrisma 7になり、このプロジェクトではprisma.config.ts での管理が必須になった。AIがいまだにschema.prisma 内に url を直接書くのを進めることがあるので注意が必要。
-- ❸まず、GitHub Actionsで自動適用の設定をする（GitHub に Secrets を登録＋リポジトリにworkflowのファイルを作る）と、ローカルでmigrate devしてprisma/migrationsを作る（DBに反映）して、Githubへプッシュすると、自動でnpx prisma migrate deployしてくれる（GitHubがpush をトリガーに workflow を起動して、workflow の中で npx prisma migrate deployを行い、本番DB（Supabase）が作成したprisma/migrationsにマイグレーションされる。）。この設定の方が長期的にみて楽。
+- ❸まず、GitHub Actionsで自動適用の設定をする（GitHub に Secrets を登録＋リポジトリにworkflowのファイルを作る）と、ローカルでmigrate devしてprisma/migrationsを作る（DBに反映）して、Githubへプッシュすると、自動でnpx prisma migrate deployしてくれる（GitHubがpush をトリガーに workflow を起動して、workflow の中で npx prisma migrate deployを行い、本番DB（Supabase）が作成したprisma/migrationsにマイグレーションされる。）。この設定の方が長期的にみて楽（GitHub Actionsがネットワーク環境の影響により難しい場合がある。次の失敗ログを見ること）。
 Prisma 7（最新） の config では、CLIが参照するのは datasource.url 1本。configにはdatasource: {url: env("DATABASE_URL")}と書くこと（DATABASE_URLをみに行くように）。さらに、Prisma 7では「どのURLを参照するか」を env で切り替える運用が一番現実的。
 
 【※prisma6：旧版】
@@ -222,7 +222,7 @@ Prisma 7（最新） の config では、CLIが参照するのは datasource.url
 **解決策（Fix）**
 - ❶AIの回答したDIRECT_URL（5432番ポート/直結用）に＠://があったので消す（末尾に:5432/postgresの入れ忘れにも注意）
 - ❷schema.prisma に url は書かずにprisma.config.tsにかく。AIが勧めてきても聞き返すこと！
-- ❸prisma6より前の改訂前のバージョンでやるなら環境変数として.envとVercelにDIRECT_URL（5432番ポート/直結用）を設定。ただ、GitHub Actionsで自動適用をするべき。
+- ❸prisma6より前の改訂前のバージョンでやるなら環境変数として.envとVercelにDIRECT_URL（5432番ポート/直結用）を設定。ただ、GitHub Actionsで自動適用をするべき（GitHub Actionsがネットワーク環境の影響により難しい場合がある。次の失敗ログを見ること）。
 
 **確認（動作検証）**
 - 「npx prisma migrate dev」をターミナルで行い、「Your database is now in sync with your migration history」と表示される。
@@ -249,13 +249,13 @@ export default defineConfig({
     path: "prisma/migrations",//マイグレーションファイル（prismaで翻訳した後の設計図：SQL版）の保存場所を指定
   },
   datasource: {
-    url: process.env.DATABASE_URL, //URLの確認先
+    url: process.env.DATABASE_URL, //.env.URLの確認先()
 
   },
 });
 
 ⭐️.env の最小例
-# マイグレーション用（更新したschema.prismaをDB（supabase）上に書き換えをお願いするとき）（npx prisma migrate dev）
+# マイグレーション用（更新したschema.prismaをローカルDB（DockerのPostgres）に書き換えをお願いするとき）（npx prisma migrate dev）
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/app_dev?schema=public"
 
 
@@ -268,6 +268,72 @@ datasource db {
 
 
 【補足】今回、DATABASE_URL（6543:データの取得・追加・更新・削除（CRUD操作））しか設定しておらずDIRECT_URL（5432番ポート/直結用）(DBを本番環境にデプロイ（公開）したり、schema.prismaをDB（supabase）上に書き換え用)の.envとVercelの設定がされていなかったため設定した。
+
+---
+
+
+### [2026-03-01] [GitHub Actionsの Prisma migrate deploy が本番DBに適用できない（5432到達不可＋6543フリーズ/応答なし]
+
+**影響範囲**
+- 発生環境：Prisma 7 / Supabase(Postgres) / GitHub Actions / Vercel
+- 緊急度：中（本番DBの自動反映が止まる）
+
+**症状**
+- 何が起きたか：GitHub Actions で npx prisma migrate deploy を本番DBへ適用しようとしたが失敗した。direct(5432) を使うと P1001: Can't reach database server になる。pooler(6543) を使うと migrate deploy が長時間くるくるして完了しない（ハングする）。
+- 期待していた動作：main にマージしたら GitHub Actions が migrate deploy を実行し、本番DB（Supabase）へ migration が適用される。
+
+**再現手順**
+1.schema.prisma を更新し、ローカルDBで npx prisma migrate dev を実行して migration を作成（prisma/migrations が増える）。
+2.変更を GitHub に push → main にマージ。
+3.GitHub Actions の workflow で npx prisma migrate deploy が実行されるが、以下のいずれかで失敗/停止する。
+
+**エラーメッセージ / ログ**
+- direct(5432) の場合：Error: P1001: Can't reach database server at `db.lncaitryhrdnmndgaorl.supabase.co:5432`
+- pooler(6543) の場合：Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-1-ap-south-1.pooler.supabase.com:6543まで出た後に進まず、長時間ハング
+- 付随調査（ローカルから 5432接続テスト）：psql: ... port 5432 failed: Network is unreachable（IPv6アドレスへ接続しようとして失敗）具体的にはdocker run --rm -it postgres:16 psql "postgresql://postgres:・・・@db.lncaitryhrdnmndgaorl.supabase.co:5432/postgres?sslmode=require"をするとport 5432 failed: Network is unreachableになる。つまり今の環境（回線/ルータ/会社ネット/携帯テザリング/Wi-Fi設定）では IPv6が使えない、または IPv6はあるけど外へ出られない状態。
+
+**切り分けメモ（どこが怪しいか）**
+- GitHub Actions ランナーから db.lncaitryhrdnmndgaorl.supabase.co:5432 へネットワーク到達できるか（nc/psqlで確認）
+- Supabase の direct host が IPv6 を優先して返し、環境によって Network is unreachable になる可能性
+- pooler(6543) 経由の migrate deploy がロック/トランザクションの都合でハングする可能性
+- Secrets が正しく渡っているか（user/host のデバッグで確認）
+
+**原因（Root Cause）**
+- GitHub-hosted runner から Supabase の direct(5432) へ到達できず、P1001 になった（ネットワーク到達性の問題）
+- pooler(6543) は到達できるが、Prisma migrate deploy が pooler 経由でハングしやすく、CIで安定しなかった。
+- ローカル環境でも direct(5432) は IPv6 経路が無く Network is unreachable になることがあり、環境依存で直結が難しかった
+
+**結論**
+- GitHub Actions（GitHub-hosted）で “direct(5432) を使った本番 migrate” は実行できない。
+- 本番DB反映は当面「ローカルで migrate deploy」に切り替え、PR（メインへのマージ前の申請）のためのworkflowではshema.prismaの内容についてはDB不要のチェックのみをprisma-schema-check.ymlに基づいてgithub Actionが実行することに切り替える（prisma validate / prisma generate / lint / build）。
+
+
+**解決策（Fix）**
+- 本番DBへの migration 適用はローカルで実行：.env.prod に本番DB接続（当面 pooler 6543）を用意。npx dotenv-cli -e .env.prod -- npx prisma migrate deployをターミナルで手動実行。
+
+**確認（動作検証）**
+- ローカルで dotenv -e .env.prod -- npx prisma migrate deploy を実行し、No pending migrations to apply. または migration 適用ログが出ることを確認。Supabase の Table Editor または _prisma_migrations を確認し、migration が適用済みであることを確認。
+
+**よくある落とし穴**
+- pooler(6543) はアプリ接続向きだが、migrate ではハング/失敗することがある
+- direct(5432) が IPv6 を優先し（docker側がIPv6が使用困難により）、回線/PCによって Network is unreachable になることがある
+- GitHub Secrets の DATABASE_URL が想定と違う値（userが postgres など）になっていると P1000 になる。具体的には、supabaseのDirectやPoolerのURLに書かれているYOUR PASSWORDには、データベースパスワード（ひとつしか設定できないもの）を採用すること（ここを書き換えたらURLのYOUR PASSWORDも書き換えること）
+- PR workflow に本番DB接続を入れると安全性/負荷/Secrets未注入(fork PR)で問題が起きるので削除
+- -e .env.prod（本番環境マイグレーション用）にprisma migrate devしたら全てデータが消えるので注意。（prisma migrate dev は、SQL（マイグレーションファイル）を作成する過程で「データベースの中身を一度リセット（全削除）」する。Prismaが「現在のDBの状態」と「マイグレーション履歴」に少しでも矛盾（ズレ）を見つけると、「Database reset required」と表示され、そこで y を押してしまうと、Prismaは現在のテーブルをすべて削除し、最初から作り直そうとします。これで本番データは全滅するので危険。）
+
+**再発防止（Prevention）**
+- 【schema.prismaを書き換えた後の動き】
+❶ ローカルでスキーマをローカルDB（DockerのPostgres）にマイグレーションしprisma.migrationsの中のSQLをローカルで作成（npx prisma migrate dev --name ・・・）
+❷ githubのブランチにプッシュして、メインにPR&マージ
+❸ ローカルで本番環境DB（supabase）にprisma.migrationsのSQLをマイグレーション（npx dotenv-cli -e .env.prod -- npx prisma migrate deploy）
+
+- ローカルで本番環境DBにマイグレーションするのに、prisma.configのurlは固定しDATABASE_URLを参照させ、接続先をターミナルへのコマンドで変えるようにする。
+　開発DBへのマイグレーションについては.env（ローカルDB：DATABASE_URL="postgresql://postgres:postgres@localhost:5432/app_dev?schema=public"）を使用し、
+　本番環境DBへのマイグレーションについては.env.prod（本番DB：DATABASE_URL="postgresql://postgres.lncaitryhrdnmndgaorl:YOUR PASSWORD@aws-1-ap-south-1.pooler.supabase.com:6543/postgres?pgbouncer=true"）を使用するように、開発と本番を分離して事故を防ぐ。
+- github Actionが行うPR　workflow（.github/workfrows/prisma-schema-check.yml）はDB不要のコード品質チェックのみ
+- workflowに timeout-minutes を設定し、ハングしても永遠に回らないようにする
+
+
 
 ---
 
