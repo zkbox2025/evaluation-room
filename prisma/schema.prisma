@@ -65,12 +65,3 @@ model Favorite {
   @@unique([viewerId, personSlug])
   @@index([personSlug])
 }
-
-// テスト後に消せばOK
-model MigrationTest {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt  // ←追加（これがおすすめ）
-  note      String?  
-  status    String  @default("draft") // ←追加（例）
-}
