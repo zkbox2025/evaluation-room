@@ -13,3 +13,10 @@
 ⚫︎Prisma 7の最新方針では、schema.prisma の中に url = ... と書くこと自体が禁止
 ⚫︎PR時はDB不要の軽量チェック（validate/build等）に徹し、本番への反映はローカルから（npx prisma migrate dev）を手動実行して確実性を担保する。接続トラブルを防ぐため、本番用には IPv4対応のPooler（6543番） を使い、.env と .env.prod を分離して誤操作のリスクを排除する。「開発はdev（.env）、本番はdeploy(.env.prod)」の原則を守り、GitHub Actionsにタイムアウトを設定することで、ハングアップによるリソース浪費を防止する。
 ⚫︎prisma-schema-check.ymlは、schema.prismaをgithubのブランチにプッシュし、メインにマージする前のPR(申請)の段階でGitHub Actionsがチェックする項目が書かれている。
+⚫︎github ActionsのRepository secretsにMICROCMS_API_KEYとMICROCMS_SERVICE_DOMAINが設定しているが、それは、PRチェック用でworkflowのBuildステップにenvを渡すために設定している。
+【将来の流れ（本番AI）】
+⚫︎PersonPage に「AIで評価文を作る」フォーム（prompt入力）
+⚫︎Server Action or Route Handler でAI APIを呼ぶ
+⚫︎成功/失敗どちらも AiGeneration に保存
+⚫︎返ってきた結果をUI表示
+⚫︎「前回生成」を再表示（すでに実装済みの土台を使う）
