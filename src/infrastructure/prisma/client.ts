@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg"
 
+
 //globalThis は、再起動しても消えない「共通の倉庫」のような場所。そこに prisma という名前で道具を置いておけるように型を定義している
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 

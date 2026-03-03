@@ -337,6 +337,124 @@ datasource db {
 
 ---
 
+### [2026-03-02] [mainにPRできない（古いworkflow残存＋microCMS環境変数不足でBuild失敗）]
+
+**影響範囲**
+- 発生環境：GitHub Actions（workflow管理）/ Next.js build / microCMS / Prisma 7（副次的）
+- 緊急度：中（PRのマージがブロックされ開発が止まる）
+
+**症状**
+- 何が起きたか：PRをmainに出すとworkfrow/prisma-schema-checkが失敗した。失敗原因が2つあり、①古いworkflowファイルが残っていたこと、②microCMSの環境変数がPRビルドに渡っていなかったこと。
+- 期待していた動作：PR作成時にworkfrow/prisma-schema-check（validate/lint/build）が走り、成功してマージできる.
+
+**再現手順**
+1.過去に作成した .github/workflows/prisma-migrate-deploy.yml を残したまま、別のworkflowへ移行したつもりでPRを作成。
+2.PRのChecksで、意図していない workflow（prisma-migrate-deploy.yml）が実行され続ける。
+3.古いworkflowを削除した後、npm run build (next build) が microCMS 設定不足で失敗し、PRが再びブロックされる。
+
+**エラーメッセージ / ログ**
+- ① 古いworkflow残存による失敗（Prisma 7のCLIオプション変更に起因）：
+Workflow file for this run: .github/workflows/prisma-migrate-deploy.yml
+Error: --from-schema-datamodel was removed. Please use --[from/to]-schema instead.
+
+- ② microCMS環境変数がGithubActionsのsecretsに登録されていないことによるBuild失敗：
+Error: parameter is required (check serviceDomain and apiKey)
+Build error occurred: Failed to collect page data for /api/health/integrity
+
+**切り分けメモ（どこが怪しいか）**
+- PRのChecks画面で「どのworkflowファイルが実行されているか」を確認
+→“Workflow file for this run” が prisma-migrate-deploy.yml（古いファイル） を指していた
+- Githubのブランチで.github/workflows/ 配下に古いファイルが残っていないか確認
+→ prisma-migrate-deploy.yml が残存していた
+- Build失敗のスタックトレースから、app/api/health/integrity がビルド時に実行され、microCMS client 初期化で落ちていることを確認（build時にenvが渡ってない）
+- src/infrastructure/microcms/client.ts が process.env.MICROCMS_SERVICE_DOMAIN と process.env.MICROCMS_API_KEY を必須参照していることを確認
+
+ 
+
+**原因（Root Cause）**
+- ① 旧workflowファイルがリポジトリに残っていた
+workflowは “名前” ではなく .github/workflows/*.yml の ファイル単位で認識されるため、内容を上書きしたつもりでも、古い prisma-migrate-deploy.yml が残っている限り実行され続けた。その旧workflow内で prisma migrate diff の古いオプション --from-schema-datamodel を使っており、Prisma 7で失敗した
+- ② PR build環境で microCMS の環境変数が未設定
+build 中に /api/health/integrity の route が評価され、microCMS client の初期化で serviceDomain/apiKey 不足によりエラーになった（PRの build は「コードを本番用にまとめる」だけじゃなく、サーバー側のルートやAPIのコードも読み込む）
+
+**結論**
+- PRのマージ失敗は「DBやmigrationそのもの」ではなく、(1) 古いworkflowファイルの残存 と (2) microCMS環境変数の不足が直接原因だった。
+
+
+**解決策（Fix）**
+- ① 古いworkflowの削除
+.github/workflows/prisma-migrate-deploy.yml を削除し、mainに反映（PR→マージ）して残存を解消。PR用workflowは .github/workflows/prisma-schema-check.yml のみに統一するために再度、ブランチにプッシュしてメインにPR/マージした
+- ② microCMS環境変数をPR buildに注入
+GitHub Secrets に以下を追加：MICROCMS_SERVICE_DOMAINとMICROCMS_API_KEY（可能ならread-only）
+.github/workflows/prisma-schema-check.yml の Buildステップにのみ env を渡すよう修正（validate/lintには渡さない）：env: MICROCMS_SERVICE_DOMAIN / MICROCMS_API_KEY
+
+**確認（動作検証）**
+- PRのChecksで “Workflow file for this run” が prisma-schema-check.yml になっていることを確認
+- prisma-schema-check が Prisma validate / Lint / Build まで全て成功することを確認
+- mainへのマージがブロックされないことを確認
+
+**よくある落とし穴**
+- workflowは「表示名」ではなく .github/workflows のファイルで管理される
+→ リネームしたつもりでも旧ファイルが残ると旧workflowが走り続ける
+- PrismaのCLIオプションはバージョンで変更される（例：--from-schema-datamodel 廃止）
+- next build 中にAPI route が評価されることがあり、環境変数が無いとビルドが落ちる
+- PR用workflowで本番DBや本番用Secretsを使うと、セキュリティ/運用面で危険になりやすい
+
+**再発防止（Prevention）**
+- .github/workflows/ の不要ファイルは必ず削除し、PRのChecksで “Workflow file for this run” を確認する
+- PR用workflowは DB不要に寄せ、必要な外部サービス（microCMSなど）のenvは Buildステップに限定して注入する
+- microCMS APIキーは可能なら read-only にしてGitHub Secretsへ保存する
+- 重要なworkflow変更は「ブランチで確認→PR checks確認→mainへ反映」の手順を固定化する
+
+
+---
+### [2026-03-03] [schema.prisma変更後に PrismaClient が更新されず aiGeneration が型エラーになる]
+
+**影響範囲**
+- 発生環境：ローカル開発（Next.js + TypeScript + Prisma 7）
+- 緊急度：中（実行はできない/ビルドが通らない）
+
+**症状**
+- 何が起きたか：prisma.aiGeneration に赤線が付き、TypeScript が Property 'aiGeneration' does not exist on type 'PrismaClient<...>' を出した
+- 期待していた動作：iGeneration モデル追加後、prisma.aiGeneration.create/findFirst/findMany が型的に利用できる
+
+**再現手順**
+1.schema.prisma に model AiGeneration { ... } を追加（またはモデル名/フィールドを変更）
+2.npx prisma generate を実行しないまま、アプリ側で prisma.aiGeneration を参照するコードを書く
+3.TypeScript が prisma.aiGeneration を認識せずエラーになる
+
+**エラーメッセージ / ログ**
+- aiGenerationに赤い波線が書いてありプロパティ 'aiGeneration' は型 'PrismaClient<PrismaClientOptions, never, defaultArgs>' に存在しません。という表記が出る
+
+**切り分けメモ（どこが怪しいか）**
+- Prisma のモデル追加（スキーマに追加）直後に発生
+- DB接続（DATABASE_URL）や PrismaPg adapter の設定とは無関係に、VSCode の中で動いている「TypeScript/JavaScript のコードを分析する裏方のプログラム」上で即エラーになる
+- npx prisma generate 実行後に解消した
+
+
+**原因（Root Cause）**
+- schema.prisma を変更しても、Prisma Client（@prisma/client の生成コードと .d.ts）は自動更新されない。生成済み Prisma Client が古く AiGeneration モデルの delegate（aiGeneration）を含んでいなかったため、prisma.aiGeneration が存在しない型として扱われた。
+
+**結論**
+- 「schema を変えたのに client を再生成していない」ことによる 型生成の不整合が原因
+
+
+
+**解決策（Fix）**
+- npx prisma generate を実行（必要に応じて dev サーバー再起動 / TS Server 再起動）
+
+**確認（動作検証）**
+- npx prisma generate 後に prisma.aiGeneration の赤線が消えることを確認。TypeScript のエラーが解消し、ビルド/型チェックが通ることを確認
+
+**よくある落とし穴**
+- migrate dev / migrate deploy と generate を混同する（migration はDB反映、generate は コード/型反映）
+- VSCode の中で動いている「TypeScript/JavaScript のコードを分析する裏方のプログラム」が古い型を握っていて、generate 後も表示が更新されないことがある（その場合、サーバー再起動で直る：Command + Shift + P）
+
+
+**再発防止（Prevention）**
+- schema.prisma を触ったら必ず npx prisma generate を実行する習慣をつける
+
+
 
 
 ## 環境変数チェックリスト
