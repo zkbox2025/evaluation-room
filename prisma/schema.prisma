@@ -14,7 +14,8 @@ model Viewer {
   deviceId  String     @unique
   favorites Favorite[]
   likes     Like[]
-  aiGenerations AiGeneration[] // ★追加
+  aiGenerations AiGeneration[]
+  aiReviews AiReview[] // ★追加
 }
 
 model AiGeneration {
@@ -43,6 +44,43 @@ model AiGeneration {
   @@index([personSlug, createdAt(sort: Desc)])
   @@index([viewerId, personSlug, createdAt(sort: Desc)])
   }
+
+model AiReview {　// ★追加
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+
+  viewerId      String
+
+  // "top" | "person" | "likes" | "favorites"
+  targetType    String
+  // personSlug など。top のときは空文字 or null でもOK
+  targetKey     String?
+
+  // レビュー対象のスナップショット（要約 or JSON）
+  inputSnapshot Json?
+
+  // AIの出力（構造化JSONをそのまま保存）
+  resultJson    Json?
+
+  model         String
+  status        String   // "success" | "error"
+  errorMessage  String?  @db.Text
+
+  // 後から効くバージョニング
+  promptVersion Int      @default(1)
+  schemaVersion Int      @default(1)
+
+  // 任意：tokens/cost
+  tokensInput   Int?
+  tokensOutput  Int?
+  costUsdMicro  Int?
+
+  viewer        Viewer   @relation(fields: [viewerId], references: [id])
+
+  @@index([viewerId, createdAt(sort: Desc)])
+  @@index([targetType, createdAt(sort: Desc)])
+  @@index([targetType, targetKey, createdAt(sort: Desc)])
+}
 
 model Like {
   id           String   @id @default(cuid())
