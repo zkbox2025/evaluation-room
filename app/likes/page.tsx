@@ -4,7 +4,7 @@ import { prisma } from "@/infrastructure/prisma/client";
 import { getOrCreateViewer } from "@/lib/viewer";//deviceIDを基にviewer（訪問者）を取得するか、なければ新しく作成する関数をインポートする
 import { getEvaluationsByIds } from "@/lib/getEvaluationsByIds";//microCMSからのEvaluationCMS（評価データ）を取得し呼び出しもとが使いやすいように変換して返す関数
 import { truncateToPlainText } from "@/viewmodels/formatters";
-
+import { RunAiReviewButton } from "@/components/ai/RunAiReviewButton";
 
 export default async function LikesPage() {//ページ本体
 
@@ -21,6 +21,7 @@ export default async function LikesPage() {//ページ本体
     );
   }
 
+
   const likes = await prisma.like.findMany({ //2) DBから、このviewerIDがいいねした evaluationId 一覧を取得
     where: { viewerId: viewer.id },//viewerIDを検索
     select: { evaluationId: true, createdAt: true },//evaluationIdとcreatedAtを取得
@@ -34,6 +35,7 @@ export default async function LikesPage() {//ページ本体
     return (
       <main className="max-w-3xl mx-auto py-20 px-6">
         <h1 className="text-2xl font-bold">いいね一覧</h1>
+        <RunAiReviewButton target={{ type: "likes" }} pathToRevalidate="/likes" />
         <p className="mt-4 text-gray-600">まだいいねがありません。</p>
         <Link className="inline-block mt-6 text-blue-600 underline" href="/">
           トップへ戻る
@@ -64,6 +66,10 @@ if (missing.length > 0) {
     <main className="min-h-screen bg-[#f6f4ee] flex justify-center">
       <div className="max-w-4xl w-full px-8 py-20">
         <h1 className="text-3xl font-semibold">いいね一覧</h1>
+
+        <RunAiReviewButton target={{ type: "likes" }} pathToRevalidate="/likes"
+        label="いいねをレビュー実行"
+        />
 
         {/* 参照切れ（デバッグ用。消してOK） */}
         {missing.length > 0 && (
