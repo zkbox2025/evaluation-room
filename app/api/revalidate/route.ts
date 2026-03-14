@@ -1,4 +1,7 @@
 // app/api/revalidate/route.ts＝キャッシュの削除を命令するファイル
+//ここで公開されているGET関数によってブラウザで以下のURLを開いて生存確認(疎通確認)できれば（繋がっていれば）ok,trueと表示される
+//https://evaluation-room.vercel.app/api/revalidate?secret=REVALIDATE_SECRET
+
 import type { NextRequest } from "next/server";//NextRequest型をnext/serverから持ってくる
 import { NextResponse } from "next/server";//NextResponseをnext/serverから持ってくる
 import { revalidatePath, revalidateTag } from "next/cache";//next/cacheからrevalidatePathとrevalidateTagを持ってくる
@@ -174,7 +177,7 @@ export async function POST(req: NextRequest) {//WebhookのPOST関数
   });
 }
 
-export async function GET(req: NextRequest) {//このプログラムの生存確認用(疎通確認用)のGET関数（microCMSを更新し本番環境：https://evaluation-room.vercel.app/api/revalidate?secret=KazuKazu00441144orローカル開発中: http://localhost:3000/api/revalidate?secret=合言葉にアクセスするとok:trueとでる）
+export async function GET(req: NextRequest) {//このプログラムの生存確認用(疎通確認用)のGET関数（microCMSを更新し本番環境：https://evaluation-room.vercel.app/api/revalidate?secret=合言葉orローカル開発中: http://localhost:3000/api/revalidate?secret=合言葉にアクセスするとok:trueとでる）
   if (!auth(req)) {                          //secret が合っているか,どのバージョンの route.ts がデプロイされているか,401じゃないか を確認するための関数（例えるとインターホンが繋がってるかの確認をキャッシュを消さずに行う）
     return NextResponse.json({ message: "Invalid secret" }, { status: 401 });//401 Unauthorized エラーを返す
   }

@@ -1,3 +1,4 @@
+//個人ページの前回レビュー表示のために最新一件のレビューをとってくる関数
 // src/lib/aiReview/getLatest.ts
 import { prisma } from "@/infrastructure/prisma/client";
 

@@ -20,6 +20,7 @@
 ⚫︎成功/失敗どちらも AiGeneration に保存
 ⚫︎返ってきた結果をUI表示
 ⚫︎「前回生成」を再表示（すでに実装済みの土台を使う）
+
 ⚫︎viewer反応（like/fav）は snapshot には入れない（個人情報/ノイズ/再現性が崩れやすい）後で入れたくなったら viewerContext を optional で足す。snapshot は JSONで統一（AiReview の inputSnapshot Json にそのまま保存できる）
 ⚫︎差分（score:点数とissue：課題）は、レビューTOPページとレビュー個人ページのみにつけて、ページの見やすさの改善に努める（favoritesとlikesも後々つけてもいいかも）。
 ⚫︎運用ルール
@@ -29,3 +30,16 @@
 例：scoresに項目追加、issuesの形変更、フィールド名変更
 ・バージョン変更は lib/aiReview/versions.ts だけで行う（他は触らない）
 ・AiReview保存時は 必ず versions.ts の値を入れる（ハードコード禁止）
+⚫︎microcmsのevaluationのkindはゆくゆくは削除でOK（使い方が決まらない）
+⚫︎レビューページへのアクセスの仕方（URL）(secret=REVIEWS_SECRET)
+レビュー一覧：https://evaluation-room.vercel.app/reviews?secret=...
+
+レビューTop：https://evaluation-room.vercel.app/reviews/top?secret=...
+
+レビューLikes：https://evaluation-room.vercel.app/reviews/likes?secret=...
+
+レビューFavorites：https://evaluation-room.vercel.app/reviews/favorites?secret=...
+
+レビューPerson別：https://evaluation-room.vercel.app/reviews/person/<slug>?secret=...
+
+レビュー詳細：https://evaluation-room.vercel.app/reviews/<id>?secret=...

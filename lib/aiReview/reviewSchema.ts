@@ -1,8 +1,9 @@
 //ユーザーのアクション（AIレビュー生成ボタンをクリック）によってサイトがサーバーにリクエストし、サーバーがAIに頼んだものがJSONとして返ってきたもの（不安定なデータ）を検品及び型定義して、アプリで使える安全な形に変換するためのコード
+//z=zod：データの形（スキーマ）を定義して中身が正しいかチェック（バリデーション）するための道具
 import { z } from "zod";
 import { PROMPT_VERSION, JSON_SCHEMA_VERSION } from "./versions";
 
-export const ReviewV1Schema = z.object({
+export const ReviewV1Schema = z.object({//AIレビュー結果の正しい形を定義した設計図（スキーマ）
   promptVersion: z.literal(PROMPT_VERSION),
   schemaVersion: z.literal(JSON_SCHEMA_VERSION),
   target: z.object({
@@ -29,4 +30,4 @@ export const ReviewV1Schema = z.object({
   nextActions: z.array(z.string()),
 });
 
-export type ReviewV1 = z.infer<typeof ReviewV1Schema>;
+export type ReviewV1 = z.infer<typeof ReviewV1Schema>;//Zodで定義したスキーマから、TypeScriptの型を自動生成しReviewV1とする

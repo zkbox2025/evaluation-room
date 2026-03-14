@@ -9,7 +9,7 @@ import { getEvaluationsByIds } from "@/lib/getEvaluationsByIds";
 import { LikeButton } from "@/components/evaluation/LikeButton";
 import { truncateToPlainText } from "@/viewmodels/formatters";
 import { clipHtml } from "@/viewmodels/formatters";
-import { RunAiReviewButton } from "@/components/ai/RunAiReviewButton";
+import { RunAiReviewButton } from "@/components/ai/RunAiReviewButton";//
 import { TargetReviewDiff } from "@/components/ai/TargetReviewDiff.server";
 
 

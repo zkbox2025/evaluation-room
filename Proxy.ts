@@ -1,9 +1,30 @@
 //アクセスされたページが表示される前にクッキー（deviceID:端末ID）を確認・作成するファイル
 
+//レビュー画面の閲覧制限 (特定のパスのみ)（開発者のみ閲覧可能）するファイル
+//review画面を開発者のみ見れる画面にする理由は、reviewはmicrocmsとsupabaseのデータをAIでレビューし、UXの改善に活かすため、ユーザーが見る必要がないことから。
+//URLの末尾に付くクエリパラメータ（例: ?secret=合言葉）をチェックし、それが環境変数で設定した値と一致するか確認し、一致しない場合は「404 Not Found（ページが見つかりません）」を表示して、ページの内容を隠蔽する。
+
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server' // serverに変更
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
+const { pathname } = request.nextUrl
+  
+  // --- 1. レビュー画面の閲覧制限 (特定のパスのみ) ---
+  if (pathname.startsWith("/reviews")) {//アクセスしている場所が/reviewsで始まるページかどうかを確認し、当てはまらないならこれ以降はスルーする。
+    const secret = request.nextUrl.searchParams.get("secret");////URLから合言葉（?secret=）を取り出す
+    const expected = process.env.REVIEWS_SECRET;//.envからサーバー側で設定していた合言葉を読み込む（Vercelに公開後はVercelの環境変数を読み込む）
+
+    if (!expected || !secret || secret !== expected) {//この3点に当てはまれば以下を実行する。①!expected: サーバー側に合言葉が設定されていない（設定ミス）②!secret: URLに合言葉がついていない③secret !== expected: URLの合言葉が、envもしくはVercelの環境変数と違っている
+
+      const url = request.nextUrl.clone();//今アクセスしようとしているURLをコピーする
+      url.pathname = "/404";//行き先を /reviews から /404（エラーページ）に書き換る
+      url.searchParams.delete("secret");//URLから合言葉を消去
+      return NextResponse.rewrite(url);//ブラウザのURLは /reviews... のまま、画面の中身だけを404ページに変える
+    }
+  }
+
+  // --- 2. デバイスIDの発行 (共通処理) ---
   // 1. まずレスポンスの準備をする
   const response = NextResponse.next()
   

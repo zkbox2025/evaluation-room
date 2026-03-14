@@ -68,7 +68,7 @@ if (missing.length > 0) {
         <h1 className="text-3xl font-semibold">いいね一覧</h1>
 
         <RunAiReviewButton target={{ type: "likes" }} pathToRevalidate="/likes"
-        label="いいねをレビュー実行"
+        label="AIレビューを実行"
         />
 
         {/* 参照切れ（デバッグ用。消してOK） */}
