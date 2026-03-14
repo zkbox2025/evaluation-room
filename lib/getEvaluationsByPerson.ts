@@ -5,6 +5,7 @@ import html from "remark-html";//インストール済みのremark-htmlからrem
 import { unstable_cache } from "next/cache";//next/cacheからunstable_cacheだけをここで使えるように持ってきて！
 import { normalizeKind, normalizeFrom } from "@/domain/rules";//domain/rulesからnormalizeKind関数とnormalizeFrom関数だけをここで使えるように持ってきて！
 import type { PersonCMS, EvaluationCMS } from "@/infrastructure/microcms/types";
+import { createUnknownPerson } from "@/domain/mappers/person";
 
 
 async function getPersonIdBySlug(slug: string): Promise<string | null> {//microCMSからのslugからpersonIdを取得する関数
@@ -60,7 +61,7 @@ export async function getEvaluationsByPerson(slug: string): Promise<Evaluation[]
           // personSlug はページslug（URL）をそのまま入れるのが一番事故がない
           return {
             id: e.id,
-            personSlug: slug,
+            personSlug: e.person?.slug ?? createUnknownPerson("unknown-person").slug,
             from: normalizeFrom(e.from),//e.fromをnormalizeFrom関数に通して保存（もしe.fromが存在しなければ"不明"を代わりに使う処理はnormalizeFrom関数の中で行う）
             date: e.date,
             year,

@@ -8,9 +8,9 @@ export async function callLLMReview(args: {
   model: string;
 }): Promise<{
   result: ReviewV1;          // 構造化JSON
-  tokensInput?: number;
-  tokensOutput?: number;
-  costUsdMicro?: number;
+  tokensInput?: number;//（オプション）AIへの入力トークン数(省略可能)
+  tokensOutput?: number;//（オプション）AIからの出力トークン数(省略可能)
+  costUsdMicro?: number;//（オプション）この呼び出しのコスト（USDマイクロ単位）(省略可能)
 }> {
   // ここは仮：実際は OpenAI / 他LLM を呼ぶ
   throw new Error("callLLMReview is not implemented yet");

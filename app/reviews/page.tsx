@@ -2,11 +2,19 @@
 import Link from "next/link";
 import { prisma } from "@/infrastructure/prisma/client";
 import { getOrCreateViewer } from "@/lib/viewer";
-import { extractReviewBits, formatTargetLabel } from "@/lib/aiReview/ui";
+import { extractReviewBits, formatTargetLabel } from "@/lib/aiReview/ui";//AIレビュー結果（resultJson）から、画面で使いたい一部（summary,scores,issues先頭3件）だけ安全に抜き出す関数と、レビュー対象を表示用の文字列にする関数(targetTypeがpersonの場合、person/targetkeyで表示する)
+import { withReviewsSecret } from "@/lib/aiReview/secretLink";
 
-export default async function ReviewsPage() {
-  const viewer = await getOrCreateViewer();
-  if (!viewer) {
+type Props = {
+  searchParams?: { secret?: string }; // ★修正箇所はここ！//引数(props)の型を定義する（params:URLからsecretを抜き取り引数とする）
+};
+
+
+export default async function ReviewsPage({ searchParams }: Props) {
+  const secret = searchParams?.secret; // ★修正箇所はここ！（secret取り出し）
+
+  const viewer = await getOrCreateViewer();//deviceIDからviewer（viewerID入り）を特定
+  if (!viewer) {//もしviewer（viewerID入り）がなければ以下を表示
     return (
       <main className="max-w-3xl mx-auto py-16 px-6">
         <h1 className="text-2xl font-semibold">レビュー履歴</h1>
@@ -17,13 +25,14 @@ export default async function ReviewsPage() {
     );
   }
 
+  //同じviewerIDのレビューデータを新しい順に並べて上から30件とってくる
   const reviews = await prisma.aiReview.findMany({
     where: { viewerId: viewer.id },
     orderBy: { createdAt: "desc" },
     take: 30,
   });
 
-  return (
+  return (//ページ全体のレイアウトのリターン
     <main className="max-w-4xl mx-auto py-16 px-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">レビュー履歴</h1>
@@ -38,15 +47,19 @@ export default async function ReviewsPage() {
         ) : (
           reviews.map((r) => {
             const { summary, scores, issuesTop3 } = extractReviewBits(r.resultJson);
-            const label = formatTargetLabel(r.targetType, r.targetKey);
+            const label = formatTargetLabel(r.targetType, r.targetKey);//targetType=personの場合、person/targetKeyで表示する
 
-            // 詳細ページへのリンク（target別）
-            const detailHref =
+            // ★修正箇所はここ！（ターゲット別へリンクにsecret付与）
+            const targetHref =
               r.targetType === "person"
-                ? `/reviews/person/${r.targetKey}`
-                : `/reviews/${r.targetType}`;
+                ? withReviewsSecret(`/reviews/person/${r.targetKey}`, secret)
+                : withReviewsSecret(`/reviews/${r.targetType}`, secret);
 
-            return (
+            // ★修正箇所はここ！（詳細へリンクにsecret付与）
+            const detailHref = withReviewsSecret(`/reviews/${r.id}`, secret);
+
+
+            return (//レビューごとにの1項目ずつを返している
               <details key={r.id} className="bg-white border border-gray-100 rounded-xl p-4">
                 <summary className="cursor-pointer list-none">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
@@ -69,10 +82,10 @@ export default async function ReviewsPage() {
                         {r.status}
                       </span>
 
-                      <Link className="text-xs text-blue-600 underline" href={detailHref}>
+                      <Link className="text-xs text-blue-600 underline" href={targetHref}>
                         ターゲット別へ
                       </Link>
-                      <Link className="text-xs text-blue-600 underline" href={`/reviews/${r.id}`}>
+                      <Link className="text-xs text-blue-600 underline" href={detailHref}>
                        詳細へ
                       </Link>
                     </div>

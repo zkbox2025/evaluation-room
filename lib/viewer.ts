@@ -1,4 +1,5 @@
 // lib/viewer.ts
+//viewer（訪問者）を特定するための関数。deviceIDを基にviewer（訪問者）を取得するか、なければ新しく作成する関数を公開している。
 import { cookies } from "next/headers";
 import { prisma } from "@/infrastructure/prisma/client";
 

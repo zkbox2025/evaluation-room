@@ -275,3 +275,10 @@ AIが間違いを指摘したり、改善案を出して並走してくれる
 2026/03/04
 ⚫︎SaveDummyAiButton：AiGeneration の保存経路テスト（AI呼ばない）：AI生成っぽい結果を“ダミーで作って”DBに保存→再表示できるかの確認。
 ⚫︎RunAiReviewButton：AiReview の保存経路テスト（レビュー機能の土台。今はAI未実装なのでエラー保存になる）：ページ内のレビュー（AiReview）の生成→保存→再表示ができるかの確認。
+2026/03/11
+⚫︎schema.prismaのテーブル内に以下のように書かれてあって、@defaultは自動生成するって意味。なのでidとcreatedAtは、結果の型定義（Zod）やDB保存を表すコードなどには含む必要はない。
+id String @id @default(cuid()
+createdAt DateTime @default(now())
+⚫︎外部からデータを受け取る引数
+・props:親コンポーネントから渡されるデータ（まとめられてる）
+・params:URLルートから渡されるデータ（※Parameters（引数）の略の場合もある。その時は全ての関数の引数（バラバラでOK））

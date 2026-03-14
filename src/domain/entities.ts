@@ -18,6 +18,7 @@ export type Category = {
   name: string;   // カテゴリーの名前
 };
 
+//アプリ側（ドメイン側）のPerson型
 export type Person = {
   cmsId: string;   // microCMSのコンテンツID（内部用）
   slug: PersonSlug;// 個別URL/参照用(カテゴリー用とは異なる)
@@ -27,7 +28,7 @@ export type Person = {
 };
 
 
-// 評価カード（microCMSのEvaluation）
+// アプリ側の（ドメイン側）のEvatuation型
 export type Evaluation = {
   id: EvaluationContentId;// microCMSのEvaluationIDを保存する（なおDB内にEvaluationテーブルは存在しない（外部参照））
   personSlug: PersonSlug;  // 被評価者

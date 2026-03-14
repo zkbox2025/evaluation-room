@@ -69,7 +69,7 @@ if (missing.length > 0) {
       <div className="max-w-4xl w-full px-8 py-20">
         <h1 className="text-3xl font-semibold">お気に入り</h1>
           <RunAiReviewButton target={{ type: "favorites" }} pathToRevalidate="/favorites"
-          label="お気に入りをレビュー実行"
+          label="AIレビューを実行"
           />
 
 
