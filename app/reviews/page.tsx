@@ -5,13 +5,13 @@ import { getOrCreateViewer } from "@/lib/viewer";
 import { extractReviewBits, formatTargetLabel } from "@/lib/aiReview/ui";//AIレビュー結果（resultJson）から、画面で使いたい一部（summary,scores,issues先頭3件）だけ安全に抜き出す関数と、レビュー対象を表示用の文字列にする関数(targetTypeがpersonの場合、person/targetkeyで表示する)
 import { withReviewsSecret } from "@/lib/aiReview/secretLink";
 
-type Props = {
-  searchParams?: { secret?: string }; // ★修正箇所はここ！//引数(props)の型を定義する（params:URLからsecretを抜き取り引数とする）
+
+type Props = { // ★修正箇所はここ！//引数(props)の型を定義する（params:URLからsecretを抜き取り引数とする）
+  searchParams?: Promise<{ secret?: string }>;
 };
 
-
 export default async function ReviewsPage({ searchParams }: Props) {
-  const secret = searchParams?.secret; // ★修正箇所はここ！（secret取り出し）
+  const { secret } = (await searchParams) ?? {};
 
   const viewer = await getOrCreateViewer();//deviceIDからviewer（viewerID入り）を特定
   if (!viewer) {//もしviewer（viewerID入り）がなければ以下を表示
