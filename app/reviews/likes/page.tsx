@@ -6,12 +6,12 @@ import { RunAiReviewButton } from "@/components/ai/RunAiReviewButton";
 import { withReviewsSecret } from "@/lib/aiReview/secretLink"; // ★修正箇所はここ！
 
 type Props = {//引数(props)の型を定義する（params:URLからsecretを抜き取り引数とする）
-  searchParams?: { secret?: string }; // ★修正箇所はここ！
+searchParams?: Promise<{ secret?: string }>;// ★修正箇所はここ！
 };
 
 
 export default async function ReviewsLikesPage({ searchParams }: Props) {
-  const secret = searchParams?.secret; // ★修正箇所はここ！
+const { secret } = (await searchParams) ?? {}; // ★修正箇所はここ！
   const viewer = await getOrCreateViewer();//deviceIDからviewer（viewerID入り）を特定する
   if (!viewer) return <p className="p-6">Cookieを有効にしてください。</p>;//もしviewerがなければ表示する
 

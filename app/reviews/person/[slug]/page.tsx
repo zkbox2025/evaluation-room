@@ -7,13 +7,12 @@ import { TargetReviewDiff } from "@/components/ai/TargetReviewDiff.server";//レ
 import { withReviewsSecret } from "@/lib/aiReview/secretLink"; // ★修正箇所はここ！
 
 type Props = { params: Promise<{ slug: string }> //引数(props)の型を定義する（params:URLからslugとsecretを抜き取り引数とする）
-searchParams?: { secret?: string }; 
-
+searchParams?: Promise<{ secret?: string }>;
 };
 
 export default async function ReviewsPersonPage({ params , searchParams }: Props) {
   const { slug } = await params;//paramsからslugをとったら次の行へ行く
-  const secret = searchParams?.secret; // ★修正箇所はここ！
+  const { secret } = (await searchParams) ?? {}; // ★修正箇所はここ！
 
   const viewer = await getOrCreateViewer();//deviceIDからviewer（viewerID入り）を取得
   if (!viewer) return <p className="p-6">Cookieを有効にしてください。</p>;//viewerがなかったら表示
