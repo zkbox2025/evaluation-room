@@ -9,5 +9,6 @@ export async function runAiReviewAction(
   target: ReviewTarget,//AIレビューの対象（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）とキー（personSlug（個人ページのみ））を指定するためのオブジェクト。
   pathToRevalidate: string
 ): Promise<RunAiReviewResult> {//サーバー側の処理（Action）から返す結果の型はRunAiReviewResult。AIレビューの結果が成功か失敗か、そして失敗ならエラーコードやメッセージを含む。
+  
   return await runAiReview(target, pathToRevalidate); // 返り値をそのまま UI（ボタン）など呼び出しもとに返す
 }
