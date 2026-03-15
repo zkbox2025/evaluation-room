@@ -10,28 +10,43 @@ import type { NextRequest } from 'next/server' // serverに変更
 export function proxy(request: NextRequest) {
 const { pathname } = request.nextUrl
   
+  // 共通レスポンス（ヘッダー確認用）
+  const response = NextResponse.next();
+  response.headers.set("x-mw-hit", "1"); // ✅ middlewareが実行された証拠
+  response.headers.set("x-mw-path", pathname);
+
   // --- 1. レビュー画面の閲覧制限 (特定のパスのみ) ---
   if (pathname.startsWith("/reviews")) {//アクセスしている場所が/reviewsで始まるページかどうかを確認し、当てはまらないならこれ以降はスルーする。
     const secret = request.nextUrl.searchParams.get("secret");////URLから合言葉（?secret=）を取り出す
     const expected = process.env.REVIEWS_SECRET;//.envからサーバー側で設定していた合言葉を読み込む（Vercelに公開後はVercelの環境変数を読み込む）
+
+// ✅ envが取れてるか確認（値そのものは出さない）
+    response.headers.set("x-mw-has-secret", secret ? "1" : "0");
+    response.headers.set("x-mw-has-expected", expected ? "1" : "0");
 
     if (!expected || !secret || secret !== expected) {//この3点に当てはまれば以下を実行する。①!expected: サーバー側に合言葉が設定されていない（設定ミス）②!secret: URLに合言葉がついていない③secret !== expected: URLの合言葉が、envもしくはVercelの環境変数と違っている
 
       const url = request.nextUrl.clone();//今アクセスしようとしているURLをコピーする
       url.pathname = "/404";//行き先を /reviews から /404（エラーページ）に書き換る
       url.search = ""; // クエリも全部消す
-      return NextResponse.rewrite(url);//ブラウザのURLは /reviews... のまま、画面の中身だけを404ページに変える
+
+      const rewritten = NextResponse.rewrite(url);
+      rewritten.headers.set("x-mw-hit", "1");
+      rewritten.headers.set("x-mw-blocked", "1"); // ✅ ブロックした証拠
+      rewritten.headers.set("x-mw-path", pathname);
+      rewritten.headers.set("x-mw-has-secret", secret ? "1" : "0");
+      rewritten.headers.set("x-mw-has-expected", expected ? "1" : "0");
+      return rewritten;
     }
   }
 
   // --- 2. デバイスIDの発行 (共通処理) ---
-  // 1. まずレスポンスの準備をする
-  const response = NextResponse.next()
+
   
-  // 2. リクエストから現在のdeviceID(クッキー)を確認
+  // 1. リクエストから現在のdeviceID(クッキー)を確認
   const deviceId = request.cookies.get('deviceId')?.value
 
-  // 3. なければ新しく発行してレスポンスにセットする
+  // 2. なければ新しく発行してレスポンスにセットする
   if (!deviceId) {
     const newId = crypto.randomUUID() // ライブラリ不要で動きます
     response.cookies.set('deviceId', newId, {
