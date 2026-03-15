@@ -19,7 +19,7 @@ const { pathname } = request.nextUrl
 
       const url = request.nextUrl.clone();//今アクセスしようとしているURLをコピーする
       url.pathname = "/404";//行き先を /reviews から /404（エラーページ）に書き換る
-      url.searchParams.delete("secret");//URLから合言葉を消去
+      url.search = ""; // クエリも全部消す
       return NextResponse.rewrite(url);//ブラウザのURLは /reviews... のまま、画面の中身だけを404ページに変える
     }
   }
@@ -38,6 +38,7 @@ const { pathname } = request.nextUrl
       httpOnly: true,
       sameSite: 'lax',
       path: '/',
+      secure: true,
     })
   }
 
