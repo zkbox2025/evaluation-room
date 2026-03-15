@@ -7,8 +7,13 @@ import type { RunAiReviewResult } from "@/lib/aiReview/actionResult";//サーバ
 
 export async function runAiReviewAction(
   target: ReviewTarget,//AIレビューの対象（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）とキー（personSlug（個人ページのみ））を指定するためのオブジェクト。
-  pathToRevalidate: string
+  pathToRevalidate: string,
+  secret?: string
 ): Promise<RunAiReviewResult> {//サーバー側の処理（Action）から返す結果の型はRunAiReviewResult。AIレビューの結果が成功か失敗か、そして失敗ならエラーコードやメッセージを含む。
-  
+  // ★ サーバー側で最終防衛線
+  const expected = process.env.REVIEWS_SECRET;
+  if (!expected || !secret || secret !== expected) {
+    return { ok: false, code: "ERROR", message: "forbidden" };
+  }
   return await runAiReview(target, pathToRevalidate); // 返り値をそのまま UI（ボタン）など呼び出しもとに返す
 }
