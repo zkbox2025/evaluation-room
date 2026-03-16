@@ -4,12 +4,10 @@
 import { prisma } from "@/infrastructure/prisma/client";////設計図(schema.prisma)を書き換えるたびにPrismaClient(電話回線)が新しく作らずに今あるものを使うための設定の関数
 import { getOrCreateViewer } from "@/lib/viewer";//viewer（訪問者）を特定するための関数。
 import { revalidatePath } from "next/cache";
-import { Prisma } from "@prisma/client";//Prismaは、Prismaが提供する型や関数の集合体で、データベース操作を行う際に使用される。
 
 import type { ReviewTarget } from "@/lib/aiReview/types";//AIレビューの対象（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）を指定するためのオブジェクト
 import type { ReviewSnapshot } from "@/lib/aiReview/snapshot";//AIレビューのスナップショット（トップレビュー、特定の人物の評価レビュー、いいね一覧レビュー、お気に入り一覧レビュー）をまとめた関数
 import { buildReviewPrompt } from "@/lib/aiReview/prompt";//AIに渡す注文書を作る関数。
-import { PROMPT_VERSION_INT, SCHEMA_VERSION_INT } from "@/lib/aiReview/versions";//プログラム専用の『型式番号』（バージョンはこのファイルだけで管理する）
 import { ReviewV1Schema } from "@/lib/aiReview/reviewSchema";////ユーザーのアクション（AIレビュー生成ボタンをクリック）によってサイトがサーバーにリクエストし、サーバーがAIに頼んだものがJSONとして返ってきたもの（不安定なデータ）を検品及び型定義して、アプリで使える安全な形に変換するためのファイル
 import { callLLMReview } from "@/lib/aiReview/callLLM";//AIに注文書(prompt)を送りレビュー結果を受け取るための「窓口（関数）」
 
@@ -27,6 +25,9 @@ import { getEvaluationsByIds } from "@/lib/getEvaluationsByIds";//評価IDのリ
 
 import type { RunAiReviewResult } from "@/lib/aiReview/actionResult";//サーバー側の処理（Action）から返ってくる結果の型定義をインポートする。
 import type { Person } from "@/domain/entities";//ドメイン側の人物の型定義
+import { RateLimitError } from "@/domain/errors";
+import { saveAiReview } from "@/lib/aiReview/save";
+
 
 export async function runAiReview(//フロントエンドからAIレビューの対象(トップ、個人、いいね一覧、お気に入り一覧)とpathToRevalidate(再描画するパス)を受け取り、AIレビュー機能の『司令塔（メイン処理）』を呼び出す。そして、その結果をRunAiReviewResultとしてフロントエンドに返す関数。
   //引数は以下の二つ
@@ -59,7 +60,7 @@ export async function runAiReview(//フロントエンドからAIレビューの
       const oldest = recent[0]!.createdAt.getTime();//recentは過去1分間に同じviewerがAIレビューをリクエストした回数を数えるためのDBからのレコードのリストで、createdAtフィールドのみを含む。recent[0]は最も古いリクエストのレコードで、そのcreatedAtフィールドの値をgetTime()メソッドでミリ秒表記のタイムスタンプに変換してoldestという変数に格納する。
       const retryAt = oldest + 60_000;//レート制限の基準点であるoldestに60秒（60_000ミリ秒）を加算して、retryAtという変数に格納する。これにより、次にAIレビューをリクエストできる時刻を計算することができる。
       const waitSec = Math.max(1, Math.ceil((retryAt - Date.now()) / 1000));//現在の時刻をDate.now()で取得し、retryAtから引いて、1000で割って秒数に変換する。さらに、Math.ceil()で切り上げて整数にし、Math.max(1, ...)で最低でも1秒の待ち時間を確保する。これにより、次にAIレビューをリクエストできるまでの待ち時間を秒単位で計算することができる。
-      throw new Error(`RATE_LIMIT:${waitSec}`);//レート制限を適用するためのエラーをthrowする。待ち時間をカウントダウンすることができる。
+      throw new RateLimitError(waitSec);//レート制限を適用するためのエラーをthrowする。待ち時間をカウントダウンすることができる。
     }
 
     // 1) snapshot生成
@@ -128,23 +129,17 @@ export async function runAiReview(//フロントエンドからAIレビューの
     const llm = await callLLMReview({ system, user, model });//AIに注文書(prompt)を送りレビュー結果を受け取るための「窓口（関数）」を呼び出して、llmという変数に格納する。引数には、system（AIの「キャラクター設定」と「絶対ルール」）、user（具体的な依頼内容（データ）、model（使用するAIモデルの名前）が含まれる。これにより、AIに注文書を送ってレビュー結果を受け取ることができる。
     const parsed = ReviewV1Schema.parse(llm.result);//サーバーがAIに頼んだ結果、JSONとして返ってきたもの（不安定なデータ）を検品及び型定義して、アプリで使える安全な形に変換するための関数を呼び出して、parsedという変数に格納する。引数には、llm.result（AIからのレビュー結果）が含まれる。これにより、AIからのレビュー結果を安全な形で扱うことができるようになる。形が正しければ parsed を返す。形が違えば例外を投げる（catch (err: unknown)：エラーでも保存に行く）
 
-    await prisma.aiReview.create({//prismaを使って、AIレビューの結果をDBに保存する。これにより、AIレビューの結果を後で参照したり分析したりすることができるようになる。
-      data: {
-        viewerId: viewer.id,
-        targetType: target.type,
-        targetKey: target.key ?? null,
-        //Zodで検品していても、PrismaとTypeScriptの相性の問題で以下の処理が必要。Zodが保証する「正しさ」と、Prismaが求める「型の定義」が100%一致しないから。Prismaの期待 (InputJsonValue)は非常に複雑で巨大な型を期待している。
-        inputSnapshot: snapshot as unknown as Prisma.InputJsonValue,//as unknown as ... は「型を一度unknownにしてから変換する」テク。as unknown (一旦、正体を消す）→ Prisma.InputJsonValue（Prismaが扱えるJSONの型）に変換する。これにより、TypeScriptの型チェックを無理やり黙らせて、Prismaが要求する型に変換する（検品済みだから大丈夫と言う意思表示）。
-        resultJson: parsed as unknown as Prisma.InputJsonValue,//as unknown as ... は「型を一度unknownにしてから変換する」テク。as unknown (一旦、正体を消す）→ Prisma.InputJsonValue（Prismaが扱えるJSONの型）に変換する。これにより、TypeScriptの型チェックを無理やり黙らせて、Prismaが要求する型に変換する（検品済みだから大丈夫と言う意思表示）。
-        model,
-        status: "success",
-        errorMessage: null,
-        promptVersion: PROMPT_VERSION_INT,
-        schemaVersion: SCHEMA_VERSION_INT,
-        tokensInput: llm.tokensInput ?? null,
-        tokensOutput: llm.tokensOutput ?? null,
-        costUsdMicro: llm.costUsdMicro ?? null,
-      },
+    //prismaを使って、AIレビューの結果をDBに保存する。これにより、AIレビューの結果を後で参照したり分析したりすることができるようになる。
+    await saveAiReview({
+    viewerId: viewer.id,
+    target,
+    snapshot,
+    model,
+    status: "success",
+    resultJson: parsed,
+    tokensInput: llm.tokensInput ?? null,
+    tokensOutput: llm.tokensOutput ?? null,
+    costUsdMicro: llm.costUsdMicro ?? null, 
     });
 
     revalidatePath(pathToRevalidate);//Next.jsのキャッシュを更新して、ページを再描画させる。これにより、Next.jsのキャッシュを更新して、ページを再描画させる
@@ -154,33 +149,27 @@ export async function runAiReview(//フロントエンドからAIレビューの
     const message = err instanceof Error ? err.message : String(err);//エラーオブジェクトからエラーメッセージを取得する。errがErrorのインスタンスであれば、そのmessageプロパティを使用する。そうでなければ、errを文字列に変換してエラーメッセージとする。これにより、エラーの内容をわかりやすく保存することができる。
 
     // errorでも保存（snapshotが作れていれば一緒に残す）
-    await prisma.aiReview.create({//
-      data: {
-        viewerId: viewer.id,
-        targetType: target.type,
-        targetKey: target.key ?? null,
-        inputSnapshot: snapshot ? (snapshot as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
-        resultJson: Prisma.DbNull,
-        model,
-        status: "error",
-        errorMessage: message,
-        promptVersion: PROMPT_VERSION_INT,
-        schemaVersion: SCHEMA_VERSION_INT,
-      },
+    await saveAiReview({
+    viewerId: viewer.id,
+    target,
+    snapshot,
+    model,
+    status: "error",
+    errorMessage: message,
     });
 
     revalidatePath(pathToRevalidate);//Next.jsのキャッシュを更新して、ページを再描画させる。これにより、Next.jsのキャッシュを更新して、ページを再描画させる
 
     // エラーを翻訳して画面に返す（受付窓口）RunAiReviewResultの準備段階
-    if (message.startsWith("RATE_LIMIT:")) {//エラーメッセージが"RATE_LIMIT:"で始まる場合、レート制限に関連するエラーであると判断する。これにより、レート制限のエラーを特定して、適切な対応をすることができる。
-      const waitSec = Number(message.split(":")[1]);//Rate limitのサーバー内部処理でthrowされたエラーメッセージを":"で分割して、2番目の部分を取り出して、数値に変換してwaitSecという変数に格納する。これにより、レート制限のエラーから待ち時間を抽出することができる。
-      return {//レート制限のエラーであることを示すRunAiReviewResultを返す。フロントエンドはこの結果を受け取って、ユーザーにレート制限中であることを伝えるメッセージを表示したり、待ち時間のカウントダウンを表示したりすることができる。
-        ok: false,
-        code: "RATE_LIMIT",
-        waitSec: Number.isFinite(waitSec) ? waitSec : 60,
-        message: "レート制限中です。少し待ってください。",
-      };
-    }
+    if (err instanceof RateLimitError) {
+    return {
+      ok: false,
+      code: "RATE_LIMIT",
+      waitSec: err.waitSec, // 直接数字が取れる！
+      message: "レート制限中です。少し待ってください。",
+    };
+  }
+
 
     return { ok: false, code: "ERROR", message };//AIレビューの実行が失敗したことを示すRunAiReviewResultを返す。フロントエンドはこの結果を受け取って、ユーザーにエラーの内容を伝えるメッセージを表示したり、再試行のオプションを提供したりすることができる。
   }

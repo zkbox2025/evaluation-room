@@ -560,10 +560,85 @@ GitHub Secrets に以下を追加：MICROCMS_SERVICE_DOMAINとMICROCMS_API_KEY�
 
 ---
 
+###[2026-03-15] [reviews一覧ページでsecretが引き継がれず、リンク先であるターゲット別/詳細にクエリが付与されない]
+
+【影響範囲】
+発生環境：Next.js App Router / reviews 一覧ページ（app/reviews/page.tsx）/ Vercel 本番・ローカル確認対象
+緊急度：中
+
+【症状】
+何が起きたか：/reviews?secret=... で一覧ページには入れるが、「ターゲット別へ」「詳細へ」を押すと、遷移先URLが /reviews/person/kitano-takeshi や /reviews/cmmqxm3t1000104l2no5kntdl のように ?secret=... なしで生成される。
+
+期待していた動作：一覧ページで受け取った secret をリンク生成時にも引き継ぎ、遷移先が /reviews/person/kitano-takeshi?secret=... や /reviews/{id}?secret=... になること。
+
+【再現手順】
+1.https://evaluation-room.vercel.app/reviews?secret=... にアクセスする。
+2.一覧ページ内の「ターゲット別へ」または「詳細へ」をクリックする。
+3.遷移先URLを確認すると、secretクエリが付いていない。
+
+【エラーメッセージ / ログ】
+・症状としては、生成されたリンク先URLに ?secret=... が含まれていなかった。
+・切り分け用に console.log(secret) を入れた場合、undefined になる可能性が高い。
+
+【切り分けメモ（どこが怪しいか）】
+・withReviewsSecret(path, secret) 自体は、secret が渡されればクエリを付ける実装になっている。
+・そのため、リンク生成前のconst secret = searchParams?.secret;でsecretを取得できていない可能性が高い。
+・app/reviews/page.tsx の searchParams の型・受け取り方が、現在のApp Routerの実行形態と合っていない疑いがある。
+・結果として withReviewsSecret() に undefinedが渡り、if (!secret)return path;が発動して素のURLが返っていると考えられる。
+
+【原因（Root Cause）】
+・searchParams から secret を正しく取り出せておらず、secret が undefined になっていた。
+・その状態で withReviewsSecret() を呼んだため、secret なしのURLがそのままリンクとして生成された。
+
+【結論】
+・不具合の本体はリンク生成関数ではなく、app/reviews/page.tsx側でのsearchParams取り出し処理にある。
+・secret を受け取れていないため、一覧ページから詳細ページ・ターゲット別ページへの遷移時に認可用クエリが引き継がれなかった。
+
+【解決策（Fix）】
+・searchParams の受け取り方を見直し、secret を確実に取得する。
+・取得した secret を withReviewsSecret() に渡し、リンク生成時に毎回クエリを付与する。
+・必要に応じて一時的に console.log("[reviews page] secret =", secret) を入れ、undefined になっていないことを確認する。
+
+（以下変更点）
+今回の問題点は、secret を読むタイミングが早すぎた、または読み方が実際のデータの形と合っていなかったため
+「Promise」「await」を入れることで、すぐsecret を触るのではなく、まずsearchParamsが使える状態になるまで待ってから取り出す
+[変更前]
+type Props = {
+  searchParams?: { secret?: string };
+};
+
+export default async function ReviewsPage({ searchParams }: Props) {
+  const secret = searchParams?.secret;
+
+[変更後]
+type Props = { 
+  searchParams?: Promise<{ secret?: string }>;
+};
+
+export default async function ReviewsPage({ searchParams }: Props) {
+  const { secret } = (await searchParams) ?? {};
+
+
+
+【確認（動作検証）】
+・/reviews?secret=... にアクセスし、一覧ページ内リンクの href を確認する。
+・「ターゲット別へ」が /reviews/person/{slug}?secret=... になることを確認する。
+・「詳細へ」が /reviews/{id}?secret=... になることを確認する。
+・遷移先ページでも 404 にならず、閲覧制限を通過できることを確認する。
+
+【よくある落とし穴】
+・withReviewsSecret() の実装だけを疑い、実際にはその前段の secret 取得失敗を見落とす。
+・一覧ページは ?secret=... 付きで開けているため、「secret は取れているはず」と思い込みやすい。
+・クリック後に消えたのではなく、最初から href に secret が入っていないケースを見逃しやすい。
+
+【再発防止（Prevention）】
+・searchParams や params を使うページでは、実際の受け取り方に合わせて型を統一する。
+・認可や閲覧制限に必要なクエリは、リンク生成時のテスト観点に含める。
+・withReviewsSecret() のような補助関数を使う箇所では、入力値 secret が undefined でないかを一時ログやテストで確認する。
+・「生成された href に必要なクエリが付いているか」を確認項目として失敗ログ・動作確認手順に明記する。
 
 
 ---
-
 
 
 ## 環境変数チェックリスト

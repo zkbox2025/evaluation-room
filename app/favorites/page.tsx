@@ -2,7 +2,6 @@ import Link from "next/link";//ページの切り替えを早くするコンポ�
 import { prisma } from "@/infrastructure/prisma/client";
 import { getOrCreateViewer } from "@/lib/viewer";//deviceIDを基にviewer（訪問者）を取得するか、なければ新しく作成する関数をインポートする
 import { getPeople } from "@/lib/getPerson";////microCMSから人物一覧をとってきてPerson型に変換する関数（同じデータを何度も取りに行かないようにキャッシュする）をインポートする
-import { RunAiReviewButton } from "@/components/ai/RunAiReviewButton";
 
 export default async function FavoritesPage() {//ページ全体の関数
   // 1) viewer（端末）を特定
@@ -33,7 +32,6 @@ export default async function FavoritesPage() {//ページ全体の関数
     return (
       <main className="max-w-3xl mx-auto py-20 px-6">
         <h1 className="text-2xl font-bold">お気に入り</h1>
-        <RunAiReviewButton target={{ type: "favorites" }} pathToRevalidate="/favorites" />
         <p className="mt-4 text-gray-600">まだお気に入りがありません。</p>
         <Link className="inline-block mt-6 text-blue-600 underline" href="/">
           トップへ戻る
@@ -68,10 +66,6 @@ if (missing.length > 0) {
     <main className="min-h-screen bg-[#f6f4ee] flex justify-center">
       <div className="max-w-4xl w-full px-8 py-20">
         <h1 className="text-3xl font-semibold">お気に入り</h1>
-          <RunAiReviewButton target={{ type: "favorites" }} pathToRevalidate="/favorites"
-          label="AIレビューを実行"
-          />
-
 
         {/* 参考：壊れ参照があれば表示（デバッグ用。消してOK） */}
         {missing.length > 0 && (
