@@ -21,6 +21,7 @@ export default async function ReviewsFavoritesPage({ searchParams }: Props) {
   });
 
   const backToListHref = withReviewsSecret("/reviews", secret); // ★修正箇所はここ！
+  const revalidatePath = withReviewsSecret("/reviews/favorites", secret);
 
   return (//ページ全体のレイアウトのリターン
   <main className="max-w-4xl mx-auto py-16 px-6">
@@ -30,8 +31,8 @@ export default async function ReviewsFavoritesPage({ searchParams }: Props) {
       <div className="flex flex-col items-end gap-2">
         <RunAiReviewButton
           target={{ type: "favorites" }}
-          pathToRevalidate="/reviews/favorites"
-          label="AIレビューを実行"
+          pathToRevalidate={revalidatePath}
+          label="AIレビューを実行" 
         />
         <Link href={backToListHref} className="text-sm text-blue-600 underline">
           一覧へ

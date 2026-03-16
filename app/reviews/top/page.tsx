@@ -24,6 +24,7 @@ const { secret } = (await searchParams) ?? {}; // ★修正箇所はここ！
   });
 
   const backToListHref = withReviewsSecret("/reviews", secret); // ★修正箇所はここ！
+  const revalidatePath = withReviewsSecret("/reviews/top", secret);
 
   return (//ページ全体のレイアウトのリターン
     <main className="max-w-4xl mx-auto py-16 px-6">
@@ -32,7 +33,7 @@ const { secret } = (await searchParams) ?? {}; // ★修正箇所はここ！
         <div className="flex flex-col items-end gap-2">
           <RunAiReviewButton
              target={{ type: "top" }}
-             pathToRevalidate="/reviews/top"
+             pathToRevalidate={revalidatePath}
              label="AIレビューを実行"
            />
         <Link href={backToListHref} className="text-sm text-blue-600 underline">

@@ -11,7 +11,23 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1) deviceId cookie発行（共通）
+    // Server Action の内部リクエストは reviews ガードから除外
+  const isServerAction = request.headers.has("next-action");
+
+  // １) /reviews の閲覧制限（secret必須）
+  if (pathname.startsWith("/reviews") && !isServerAction) {
+    const secret = request.nextUrl.searchParams.get("secret");
+    const expected = process.env.REVIEWS_SECRET;
+
+    if (!expected || !secret || secret !== expected) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/404";
+      url.searchParams.delete("secret");
+      return NextResponse.rewrite(url);
+    }
+  }
+
+  // ２) deviceId cookie発行（共通）
   const response = NextResponse.next();
   const deviceId = request.cookies.get("deviceId")?.value;
 
@@ -22,19 +38,6 @@ export function middleware(request: NextRequest) {
       path: "/",
       secure: true,
     });
-  }
-
-  // 2) /reviews の閲覧制限（secret必須）
-  if (pathname.startsWith("/reviews")) {
-    const secret = request.nextUrl.searchParams.get("secret");
-    const expected = process.env.REVIEWS_SECRET;
-
-    if (!expected || !secret || secret !== expected) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/404";
-      url.search = "";
-      return NextResponse.rewrite(url);
-    }
   }
 
   return response;

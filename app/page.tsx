@@ -9,7 +9,6 @@ import { getEvaluationsByIds } from "@/lib/getEvaluationsByIds";
 import { LikeButton } from "@/components/evaluation/LikeButton";
 import { truncateToPlainText } from "@/viewmodels/formatters";
 import { clipHtml } from "@/viewmodels/formatters";
-import { RunAiReviewButton } from "@/components/ai/RunAiReviewButton";//
 import { TargetReviewDiff } from "@/components/ai/TargetReviewDiff.server";
 
 
@@ -21,8 +20,6 @@ export default async function Home() {//ページ本体の関数
 
     // 2) viewer（DBの人）
   const viewer = await getOrCreateViewer();//deviceIDからviewerIDを取得
-  {/* Topレビュー実行 */}
-  <RunAiReviewButton target={{ type: "top" }} pathToRevalidate="/" />
 
   const latestIds = latest.map((e) => e.id);//最新evaluation型（５件）の中からevaluationIDのみを取得
 
@@ -89,13 +86,6 @@ const latestLikedSet = new Set(latestLikeRows.map((l) => l.evaluationId));//最�
   <h1 className="text-4xl font-semibold text-center flex-1">評価の部屋</h1>
 
   <div className="w-[160px] flex flex-col items-end gap-3">
-    <RunAiReviewButton target={{ type: "top" }} pathToRevalidate="/" />
-    <Link
-      href="/reviews"
-      className="text-sm rounded-lg px-3 py-2 border border-gray-200 bg-white hover:bg-gray-50"
-    >
-      レビュー履歴
-    </Link>
   </div>
 </div>
 

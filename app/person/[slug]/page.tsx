@@ -11,7 +11,6 @@ import { SaveDummyAiButton } from "@/components/ai/SaveDummyAiButton";
 import { getLatestAiGenerationForPerson } from "@/lib/aiGeneration";
 import { buildPersonReviewSnapshot } from "@/lib/aiReview/snapshot";
 import { getLatestAiReview } from "@/lib/aiReview/getLatest";
-import { RunAiReviewButton } from "@/components/ai/RunAiReviewButton";
 import { TargetReviewDiff } from "@/components/ai/TargetReviewDiff.server";
 
 type Props = {//ページコンポーネントのプロパティの型を定義する
@@ -89,10 +88,6 @@ return (
 
     <p className="mt-4 text-gray-600 leading-relaxed">{person.description}</p>
     <SaveDummyAiButton personSlug={slug} />
-    <RunAiReviewButton
-     target={{ type: "person", key: slug }}
-     pathToRevalidate={`/person/${slug}`}
-    />
     <EvaluationTimeline evaluations={evaluationsWithLikeStatus} />
     {latestAiGeneration && (
   <div className="mt-6 rounded-xl bg-white p-4 border border-gray-100">

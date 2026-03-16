@@ -31,6 +31,7 @@
 ・バージョン変更は lib/aiReview/versions.ts だけで行う（他は触らない）
 ・AiReview保存時は 必ず versions.ts の値を入れる（ハードコード禁止）
 ⚫︎microcmsのevaluationのkindはゆくゆくは削除でOK（使い方が決まらない）
+⚫︎secret を「URLに保持し続ける」設計は漏洩しやすいため、改善案（将来の理想）として?secret= を最初だけ使い、通ったらSet-CookieでreviewsAuth=1をhttpOnlyで付与、以後はcookieで判定（URLからsecretを消せる）を実装すること
 ⚫︎レビューページへのアクセスの仕方（URL）(secret=REVIEWS_SECRET)
 レビュー一覧：https://evaluation-room.vercel.app/reviews?secret=...
 
