@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { prisma } from "@/infrastructure/prisma/client";
 import { getOrCreateViewer } from "@/lib/viewer";//viewer（訪問者）を特定するための関数。deviceIDを基にviewer（訪問者）を取得するか、なければ新しく作成する関数を公開している。
-import { ReviewDiffForId } from "@/components/ai/ReviewDiffForId.server";//詳細レビュー画面の「前回レビューとの差分」表示のためのコンポーネント
+import { ReviewDiffForId } from "@/components/ai/ReviewDiffForId";//詳細レビュー画面の「前回レビューとの差分」表示のためのコンポーネント
 import { withReviewsSecret } from "@/lib/aiReview/secretLink"; // ★修正箇所はここ！
 
 type Props = {
@@ -54,7 +54,7 @@ export default async function ReviewDetailPage({ params, searchParams }: Props) 
       <main className="max-w-3xl mx-auto py-16 px-6">
         <h1 className="text-2xl font-semibold">レビュー詳細</h1>
         <p className="mt-4 text-sm text-gray-600">レビューが見つかりません。</p>
-        <Link href="/reviews?secret=" className="inline-block mt-6 text-blue-600 underline">
+        <Link href={backToListHref}  className="inline-block mt-6 text-blue-600 underline">
           履歴一覧へ
         </Link>
       </main>
