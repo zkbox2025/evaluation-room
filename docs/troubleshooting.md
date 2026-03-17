@@ -640,6 +640,90 @@ export default async function ReviewsPage({ searchParams }: Props) {
 
 ---
 
+###[2026-03-16] [reviews 配下の middleware が Server Action を弾き、AIレビュー実行時にDB保存されない]
+
+【影響範囲】
+発生環境：Vercel 本番環境 / /reviews 配下の AIレビュー実行ボタン / Server Action 経由の保存処理
+緊急度：高
+
+【症状】
+何が起きたか：
+/reviews 配下で AIレビュー実行ボタンを押しても、新しいレビューがDBに保存されず、画面上の履歴にも追加されなかった。
+
+期待していた動作：
+AIレビュー実行ボタン押下後、Server Action が正常に呼ばれ、runAiReview → DB保存 → 再描画まで実行され、最新レビューが履歴に追加されること。
+
+【再現手順】
+1./reviews?... のレビュー画面を本番環境で開く。
+2.AIレビュー実行ボタンを押す。
+3.DBに新規レコードが保存されず、画面上の履歴にも新しいレビューが表示されない。
+
+【エラーメッセージ / ログ】
+・runAiReviewAction 先頭に追加した console.log("[runAiReviewAction] called"); が出力されなかった。
+・画面上では明示的なエラーが見えにくかったが、実際には Server Action まで到達していなかった。
+
+【切り分けメモ（どこが怪しいか）】
+・saveAiReview の不具合ではなく、そもそも runAiReviewAction が呼ばれていない可能性を疑った。
+・本番ログで called が出なかったため、Action 本体より前の段階でリクエストが止められていると判断した。
+・/reviews 配下を保護する middleware が、ページ閲覧用のGETだけでなく Server Action の内部リクエストまで検査している可能性が高かった。
+
+【原因（Root Cause）】
+・/reviews 用の middleware ガードが、通常のページアクセスだけでなく Server Action の内部リクエストにも適用されていた。
+・Server Action 側の内部リクエストには secret クエリが付いていないため、!secret に引っかかって rewrite され、Action 本体まで到達できなかった。
+・その結果、DB保存処理も再描画処理も実行されなかった。
+
+【結論】
+・不具合の本体は runAiReview や saveAiReview の保存ロジックではなく、/reviews 配下の middleware が Server Action を誤ってブロックしていたことだった。
+・ページ表示の認可と、ページ内部で動く Server Action の実行を同じ条件で扱ったことが原因だった。
+
+【解決策（Fix）】
+・middleware で Server Action の内部リクエストを判定し、/reviews の secret ガード対象から除外した。
+・具体的には request.headers.has("next-action") を使って isServerAction を判定し、通常のページアクセス時だけ secret チェックを行うように修正した。
+
+ー修正前ー
+if (pathname.startsWith("/reviews")) {
+  const secret = request.nextUrl.searchParams.get("secret");
+  const expected = process.env.REVIEWS_SECRET;
+
+  if (!expected || !secret || secret !== expected) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/404";
+    url.searchParams.delete("secret");
+    return NextResponse.rewrite(url);
+  }
+}
+
+ー修正後ー
+  const isServerAction = request.headers.has("next-action");
+
+  if (pathname.startsWith("/reviews") && !isServerAction) {
+    const secret = request.nextUrl.searchParams.get("secret");
+    const expected = process.env.REVIEWS_SECRET;
+
+    if (!expected || !secret || secret !== expected) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/404";
+      url.searchParams.delete("secret");
+      return NextResponse.rewrite(url);
+    }
+  }
+
+【確認（動作検証）】
+・修正後、本番環境で AIレビュー実行ボタンを押したところ、DB に新規レビューが保存されることを確認した。
+・レビュー履歴画面にも新しいレビューが追加されることを確認した。
+・/reviews?... への通常アクセス時は引き続き secret ガードが有効であることも確認した。
+
+【よくある落とし穴】
+・middleware はページ表示のためのリクエストだけでなく、内部的な Action リクエストにも適用される場合がある。
+・「ページは開けるのにボタンだけ動かない」場合、保存処理やDBを疑いがちだが、実際には Action 到達前の middleware/認可で止まっていることがある。
+・UI から secret を外した直後に起きたため、保存関数の変更が原因に見えやすいが、本当の原因は入口ガードの適用範囲だった。
+
+【再発防止（Prevention）】
+・/reviews のような閲覧制限つきパスでは、ページ閲覧リクエストと内部実行リクエストを同一条件で扱わない。
+・Server Action や内部POSTが関わる画面では、middleware 追加・修正時に「Action まで到達するか」を確認項目に入れる。
+・不具合切り分け時は、Action 先頭ログを入れて「呼ばれているか / いないか」を最初に確認する。
+・認可ロジックを変更した際は、画面表示だけでなくボタン押下・保存・再描画まで一連で動作確認する。
+
 
 ## 環境変数チェックリスト
 

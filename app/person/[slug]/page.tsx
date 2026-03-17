@@ -11,7 +11,7 @@ import { SaveDummyAiButton } from "@/components/ai/SaveDummyAiButton";
 import { getLatestAiGenerationForPerson } from "@/lib/aiGeneration";
 import { buildPersonReviewSnapshot } from "@/lib/aiReview/snapshot";
 import { getLatestAiReview } from "@/lib/aiReview/getLatest";
-import { TargetReviewDiff } from "@/components/ai/TargetReviewDiff.server";
+import { ReviewDiffForTarget } from "@/components/ai/ReviewDiffForTarget";
 
 type Props = {//ページコンポーネントのプロパティの型を定義する
   params: Promise<{ slug: string }>;//このページはURLにslugを持つルート（例 /person/tanaka（←params））で、slugを使って人物を特定する
@@ -142,7 +142,7 @@ return (
 {viewer && (
   <section className="mt-16">
     <h2 className="text-lg font-semibold mb-4">前回レビューとの差分</h2>
-    <TargetReviewDiff viewerId={viewer.id} targetType="person" targetKey={slug} />
+    <ReviewDiffForTarget viewerId={viewer.id} targetType="person" targetKey={slug} />
   </section>
 )}
     <Link className="inline-block mt-10 text-blue-600 underline" href="/">

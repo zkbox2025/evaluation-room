@@ -9,7 +9,7 @@ import { getEvaluationsByIds } from "@/lib/getEvaluationsByIds";
 import { LikeButton } from "@/components/evaluation/LikeButton";
 import { truncateToPlainText } from "@/viewmodels/formatters";
 import { clipHtml } from "@/viewmodels/formatters";
-import { TargetReviewDiff } from "@/components/ai/TargetReviewDiff.server";
+import { ReviewDiffForTarget } from "@/components/ai/ReviewDiffForTarget";
 
 
 export default async function Home() {//ページ本体の関数
@@ -240,7 +240,7 @@ const latestLikedSet = new Set(latestLikeRows.map((l) => l.evaluationId));//最�
         {viewer && (
   <section className="mt-16">
     <h2 className="text-lg font-semibold mb-4">前回レビューとの差分</h2>
-    <TargetReviewDiff viewerId={viewer.id} targetType="top" />
+    <ReviewDiffForTarget viewerId={viewer.id} targetType="top" />
   </section>
 )}
       </div>
