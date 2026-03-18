@@ -2,8 +2,9 @@
 import Link from "next/link";
 import { prisma } from "@/infrastructure/prisma/client";
 import { getOrCreateViewer } from "@/lib/viewer";
-import { extractReviewBits, formatTargetLabel } from "@/lib/aiReview/ui";//AIレビュー結果（resultJson）から、画面で使いたい一部（summary,scores,issues先頭3件）だけ安全に抜き出す関数と、レビュー対象を表示用の文字列にする関数(targetTypeがpersonの場合、person/targetkeyで表示する)
+import { extractReviewBits, formatTargetLabel } from "@/viewmodels/aiReview";//AIレビュー結果（resultJson）から、画面で使いたい一部（summary,scores,issues先頭3件）だけ安全に抜き出す関数と、レビュー対象を表示用の文字列にする関数(targetTypeがpersonの場合、person/targetkeyで表示する)
 import { withReviewsSecret } from "@/lib/aiReview/secretLink";
+import type { ReviewTarget, PersonSlug } from "@/domain/entities";
 
 
 type Props = { // ★修正箇所はここ！//引数(props)の型を定義する（params:URLからsecretを抜き取り引数とする）
@@ -32,6 +33,8 @@ export default async function ReviewsPage({ searchParams }: Props) {
     take: 30,
   });
 
+  
+
   return (//ページ全体のレイアウトのリターン
     <main className="max-w-4xl mx-auto py-16 px-6">
       <div className="flex items-center justify-between">
@@ -46,8 +49,18 @@ export default async function ReviewsPage({ searchParams }: Props) {
           <p className="text-sm text-gray-600">まだレビュー履歴がありません。</p>
         ) : (
           reviews.map((r) => {
+            if (r.targetType === "person" && !r.targetKey) return null;
             const { summary, scores, issuesTop3 } = extractReviewBits(r.resultJson);
-            const label = formatTargetLabel(r.targetType, r.targetKey);//targetType=personの場合、person/targetKeyで表示する
+
+            const target: ReviewTarget =
+            r.targetType === "person"
+            ? { type: "person", key: r.targetKey as PersonSlug } // DBはstringなので cast
+            : r.targetType === "top"
+            ? { type: "top" }
+            : r.targetType === "likes"
+            ? { type: "likes" }
+            : { type: "favorites" };
+            const label = formatTargetLabel(target);
 
             // ★修正箇所はここ！（ターゲット別へリンクにsecret付与）
             const targetHref =

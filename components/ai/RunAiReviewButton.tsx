@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useTransition } from "react";//useTransition:サーバー側の処理（非同期処理）が終わるまで待っているかどうか」を自動で判定。useState: メッセージ内容、ボタンのロック状態、そしてレート制限の残り時間（waitSec）を保持する。useEffect：画面の表示（レンダリング）とは直接関係ない処理を、特定のタイミングで動かしたいときに使う。ここでは、waitSecが更新されたときにカウントダウンを開始するために使う。
 import { runAiReviewAction } from "@/app/actions/runAiReviewAction";//フロントエンド（画面）とバックエンド（心臓部）を安全につなぐ『専用の窓口（橋渡し役）』」としての役割を持つサーバー側の処理（Action）。フロントエンドからAIレビューの対象とpathToRevalidate(再描画するパス)を受け取り、AIレビュー機能の『司令塔（メイン処理）』を呼び出す。
-import type { ReviewTarget } from "@/lib/aiReview/types";
+import type { ReviewTarget } from "@/domain/entities";
 
 type Props = {//このコンポーネントが受け取るpropsの型定義
   target: ReviewTarget;//AIレビューの対象（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）を指定するためのオブジェクト。typeはReviewTarget型。
@@ -57,6 +57,16 @@ export function RunAiReviewButton({ target, pathToRevalidate, label = "AIレビ�
             setMessage(null);//メッセージは消す（秒数が表示されているから説明は十分なはず）
             return;
           }
+
+      if (res.code === "FORBIDDEN") {//viewerが取れない（cookie無効やviewer not found）場合
+        setMessage("実行できません。Cookieを有効にしてください。");
+        return;
+      }
+
+      if (res.code === "VALIDATION_ERROR") {//AIからのレビュー結果が型定義（ReviewV1Schema）に当てはまらなかった場合
+        setMessage("AI応答の形式が不正でした。時間をおいて再実行してください。");
+        return;
+      }
 
           // その他エラー
           //サーバーから返ってきたエラーメッセージ(res.message)があればそれを表示、なければ「レビュー実行に失敗しました」というデフォルトメッセージを表示する。

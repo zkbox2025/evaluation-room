@@ -47,7 +47,7 @@ export default async function PersonPage({ params }: Props) {//人物の詳細�
 
 
   const latestReview = viewer
-  ? await getLatestAiReview({ viewerId: viewer.id, targetType: "person", targetKey: slug })
+  ? await getLatestAiReview({ viewerId: viewer.id, target:{ type: "person", key: slug  } })
   : null;
 
   const latestAiGeneration = viewer
@@ -142,7 +142,10 @@ return (
 {viewer && (
   <section className="mt-16">
     <h2 className="text-lg font-semibold mb-4">前回レビューとの差分</h2>
-    <ReviewDiffForTarget viewerId={viewer.id} targetType="person" targetKey={slug} />
+    <ReviewDiffForTarget
+     viewerId={viewer.id}
+     target={{ type: "person", key: slug  }}
+    />
   </section>
 )}
     <Link className="inline-block mt-10 text-blue-600 underline" href="/">

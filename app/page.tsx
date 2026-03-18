@@ -240,7 +240,7 @@ const latestLikedSet = new Set(latestLikeRows.map((l) => l.evaluationId));//最�
         {viewer && (
   <section className="mt-16">
     <h2 className="text-lg font-semibold mb-4">前回レビューとの差分</h2>
-    <ReviewDiffForTarget viewerId={viewer.id} targetType="top" />
+    <ReviewDiffForTarget viewerId={viewer.id} target={{ type: "top" }} />
   </section>
 )}
       </div>

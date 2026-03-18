@@ -3,7 +3,7 @@
 import { prisma } from "@/infrastructure/prisma/client";
 import { Prisma } from "@prisma/client";
 import { PROMPT_VERSION_INT, SCHEMA_VERSION_INT } from "@/lib/aiReview/versions";
-import type { ReviewTarget } from "@/lib/aiReview/types";
+import type { ReviewTarget } from "@/domain/entities";
 import type { ReviewSnapshot } from "@/lib/aiReview/snapshot";
 
 type SaveAiReviewParams = {//保存するデータの型
@@ -40,7 +40,7 @@ export async function saveAiReview({
     data: {
       viewerId,
       targetType: target.type,
-      targetKey: target.key ?? null,
+      targetKey: target.type === "person" ? target.key : null,
       inputSnapshot: snapshot ? toInputJson(snapshot) : Prisma.DbNull,
       resultJson:
         status === "success" && resultJson !== undefined
