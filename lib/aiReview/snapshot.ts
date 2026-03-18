@@ -5,12 +5,16 @@
 //　　カテゴリーが偏っている→コンテンツの幅が狭い→UX改善の余地あり
 //　　いいねが少ない→ユーザーの共感が得られていない→評価内容や対象の見直しが必要
 import { htmlToText } from "@/viewmodels/formatters";//HTMLをテキストに変換する関数。AIレビューのスナップショットを作るときに、評価の内容（contentHtml）をAIに渡す前に、HTMLタグを取り除いてテキストだけにするために使う。
-import type { Person, Evaluation } from "@/domain/entities";//ドメイン側の人物と評価の型定義をインポートする。AIレビューのスナップショットを作るときに、これらの型を使って人物や評価の情報を整理してAIに渡すために使う。
+import type { Person, Evaluation, PersonSlug } from "@/domain/entities";//ドメイン側の人物と評価の型定義をインポートする。AIレビューのスナップショットを作るときに、これらの型を使って人物や評価の情報を整理してAIに渡すために使う。
 
+function safeTime(dateStr: string): number {//正常な日付ならその日付、壊れた日付なら０
+  const t = new Date(dateStr).getTime();
+  return Number.isFinite(t) ? t : 0;
+}
 
 export type PersonReviewSnapshot = {//特定の人物ページのAIレビューについてAIへ渡すスナップショットの型定義。AIレビューの対象が特定の人物の評価の場合に、この形式でスナップショットを作ってAIに渡す。targetTypeは"person"、targetKeyはその人物のslug、generatedAtはスナップショットが生成された日時、personにはその人物の情報、evaluationsにはその人物に対する評価のリスト、statsには評価の統計情報が含まれる。
   targetType: "person";
-  targetKey: string; // personSlug
+  targetKey: PersonSlug;
   generatedAt: string; //スナップショットが生成された日時
   person: {//人物についての情報
     slug: string;//人物ページのURLに使うスラッグ
@@ -103,7 +107,7 @@ export type ReviewSnapshot =//targetTypeによって4つの中からどのスナ
   const { person, evaluations, takeLatest = 5 } = args;//引数からperson、evaluations、takeLatestを取り出す。takeLatestは最新の評価をいくつスナップショットに含めるかのオプションで、デフォルトは5件。
 
   const latest = [...evaluations]//全評価のリスト（特定人物の評価ではなく全体の評価）をコピーして、最新の評価から順に並べ替える。
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())//評価の日付を比較して、新しいものが前に来るようにソートする。
+    .sort((a, b) => safeTime(b.date) - safeTime(a.date))//評価の日付を比較して、新しいものが前に来るようにソートする。
     .slice(0, takeLatest);//ソートされた全評価のリストから、最新の5件だけを取り出す。これがスナップショットに含める評価のリストになる。
 
   return {
@@ -199,7 +203,7 @@ export function buildLikesReviewSnapshot(args: {//いいね一覧ページのAI�
   const { evaluations, takeLatest = 10 } = args;
 
   const latest = [...evaluations]//いいねされた評価のリストをコピー。
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())//最新のいいねから順に並べ替える。
+    .sort((a, b) => safeTime(b.date) - safeTime(a.date))//最新のいいねから順に並べ替える。
     .slice(0, takeLatest);//最新いいね順のリストから、最新の10件だけを取り出す。これがスナップショットに含めるいいねのリストになる。
 
   return {

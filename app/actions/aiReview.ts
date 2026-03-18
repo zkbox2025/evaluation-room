@@ -5,7 +5,7 @@ import { prisma } from "@/infrastructure/prisma/client";////設計図(schema.pri
 import { getOrCreateViewer } from "@/lib/viewer";//viewer（訪問者）を特定するための関数。
 import { revalidatePath } from "next/cache";
 
-import type { ReviewTarget } from "@/lib/aiReview/types";//AIレビューの対象（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）を指定するためのオブジェクト
+import type { ReviewTarget,Person } from "@/domain/entities";//AIレビューの対象（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）を指定するためのオブジェクト
 import type { ReviewSnapshot } from "@/lib/aiReview/snapshot";//AIレビューのスナップショット（トップレビュー、特定の人物の評価レビュー、いいね一覧レビュー、お気に入り一覧レビュー）をまとめた関数
 import { buildReviewPrompt } from "@/lib/aiReview/prompt";//AIに渡す注文書を作る関数。
 import { ReviewV1Schema } from "@/lib/aiReview/reviewSchema";////ユーザーのアクション（AIレビュー生成ボタンをクリック）によってサイトがサーバーにリクエストし、サーバーがAIに頼んだものがJSONとして返ってきたもの（不安定なデータ）を検品及び型定義して、アプリで使える安全な形に変換するためのファイル
@@ -24,9 +24,9 @@ import { getLatestEvaluations } from "@/lib/getLatestEvaluations";
 import { getEvaluationsByIds } from "@/lib/getEvaluationsByIds";//評価IDのリストから評価のリストを取得する関数
 
 import type { RunAiReviewResult } from "@/lib/aiReview/actionResult";//サーバー側の処理（Action）から返ってくる結果の型定義をインポートする。
-import type { Person } from "@/domain/entities";//ドメイン側の人物の型定義
 import { RateLimitError } from "@/domain/errors";
 import { saveAiReview } from "@/lib/aiReview/save";
+import { ZodError } from "zod";
 
 
 export async function runAiReview(//フロントエンドからAIレビューの対象(トップ、個人、いいね一覧、お気に入り一覧)とpathToRevalidate(再描画するパス)を受け取り、AIレビュー機能の『司令塔（メイン処理）』を呼び出す。そして、その結果をRunAiReviewResultとしてフロントエンドに返す関数。
@@ -35,10 +35,15 @@ export async function runAiReview(//フロントエンドからAIレビューの
   pathToRevalidate: string
 ): Promise<RunAiReviewResult> {//返り値の型はRunAiReviewResult。AIレビューの結果が成功か失敗か、そして失敗ならエラーコードやメッセージを含む。
   const viewer = await getOrCreateViewer();//viewer（訪問者）を特定するための関数を呼び出して、viewerを取得する。viewerは、AIレビューを誰がリクエストしているかを識別するために必要な情報を含むオブジェクト。もしviewerが取得できない場合は、AIレビューの実行ができないため、エラーコードとメッセージを含むRunAiReviewResultを返す。
+  
+  //viewerが取れない（cookie無効やviewer not found）場合
   if (!viewer) {
-    // viewerが取れない = 実行不能（Cookie無効など）
-    return { ok: false, code: "ERROR", message: "viewer not found (Cookieを有効にしてください)" };
-  }
+  return {
+    ok: false,
+    code: "FORBIDDEN",
+    message: "viewer not found (Cookieを有効にしてください)",
+  };
+}
 
   const model = "gpt-4.1-mini";//使用するAIモデルの名前を指定する。ここでは、gpt-4.1-miniというモデルを使用している。モデルの選択は、レビューの品質やコストに影響するため、適切なモデルを選ぶことが重要。
   let snapshot: ReviewSnapshot | null = null;//AIレビューのスナップショットを格納する変数（ReviewSnapshot型を使用）。初期値はnull。
@@ -145,32 +150,61 @@ export async function runAiReview(//フロントエンドからAIレビューの
     revalidatePath(pathToRevalidate);//Next.jsのキャッシュを更新して、ページを再描画させる。これにより、Next.jsのキャッシュを更新して、ページを再描画させる
     
     return { ok: true };//AIレビューの実行が成功したことを示すRunAiReviewResultを返す。フロントエンドはこの結果を受け取って、ユーザーに成功のメッセージを表示したり、AIレビューの結果を画面に反映させたりすることができる。
-  } catch (err: unknown) {//AIレビューの実行中にエラーが発生した場合(ReviewV1Schema:検品で形が違うためエラーが出た場合など）の処理。エラー内容を保存して後で見れるようにするためのコード。
-    const message = err instanceof Error ? err.message : String(err);//エラーオブジェクトからエラーメッセージを取得する。errがErrorのインスタンスであれば、そのmessageプロパティを使用する。そうでなければ、errを文字列に変換してエラーメッセージとする。これにより、エラーの内容をわかりやすく保存することができる。
-
-    // errorでも保存（snapshotが作れていれば一緒に残す）
+  
+    //もし１分以内に3回より多くAIレビューボタンを押した場合、APIの使いすぎ（RateLimitError）が発生した場合、データベース（saveAiReview）に「レート制限によるエラー」として記録し、ユーザーにエラーメッセージを返す
+    } catch (err: unknown) {
+  if (err instanceof RateLimitError) {
     await saveAiReview({
+      viewerId: viewer.id,
+      target,
+      snapshot,
+      model,
+      status: "error",
+      errorMessage: "RATE_LIMIT_EXCEEDED",
+    });
+
+    revalidatePath(pathToRevalidate);
+
+    return {
+      ok: false,
+      code: "RATE_LIMIT",
+      waitSec: err.waitSec,
+      message: "レート制限中です。少し待ってください。",
+    };
+  }
+
+  if (err instanceof ZodError) {//もしエラーが「AIの返答データ形式が想定と違った（ZodError）」だった場合、データベース（saveAiReview）に「返答データ不正」として記録し、ユーザーにそのまま「AI応答の形式が不正でした」というメッセージを返す
+    await saveAiReview({
+      viewerId: viewer.id,
+      target,
+      snapshot,
+      model,
+      status: "error",
+      errorMessage: "VALIDATION_ERROR",
+    });
+
+    revalidatePath(pathToRevalidate);
+
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "AI応答の形式が不正でした。",
+    };
+  }
+
+  const message = err instanceof Error ? err.message : String(err);//「発生した一般的なエラー（err）から、表示可能な『エラーメッセージ（文字列）』を安全に取り出す処理
+
+  await saveAiReview({
     viewerId: viewer.id,
     target,
     snapshot,
     model,
     status: "error",
     errorMessage: message,
-    });
+  });
 
-    revalidatePath(pathToRevalidate);//Next.jsのキャッシュを更新して、ページを再描画させる。これにより、Next.jsのキャッシュを更新して、ページを再描画させる
+  revalidatePath(pathToRevalidate);
 
-    // エラーを翻訳して画面に返す（受付窓口）RunAiReviewResultの準備段階
-    if (err instanceof RateLimitError) {
-    return {
-      ok: false,
-      code: "RATE_LIMIT",
-      waitSec: err.waitSec, // 直接数字が取れる！
-      message: "レート制限中です。少し待ってください。",
-    };
-  }
-
-
-    return { ok: false, code: "ERROR", message };//AIレビューの実行が失敗したことを示すRunAiReviewResultを返す。フロントエンドはこの結果を受け取って、ユーザーにエラーの内容を伝えるメッセージを表示したり、再試行のオプションを提供したりすることができる。
-  }
+  return { ok: false, code: "UNKNOWN", message };
+}
 }

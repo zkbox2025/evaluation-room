@@ -2,7 +2,7 @@
 "use server";
 
 import { runAiReview } from "@/app/actions/aiReview";////AIレビュー機能の『司令塔（メイン処理）』をインポートする。
-import type { ReviewTarget } from "@/lib/aiReview/types";//AIレビューの対象（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）を指定するためのオブジェクト
+import type { ReviewTarget } from "@/domain/entities";//AIレビューの対象（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）を指定するためのオブジェクト
 import type { RunAiReviewResult } from "@/lib/aiReview/actionResult";//サーバー側の処理（Action）から返ってくる結果の型定義をインポートする。
 
 export async function runAiReviewAction(

@@ -36,7 +36,12 @@ export function diffReview(latestJson: ReviewJson, prevJson: ReviewJson) {//最�
 
   const deltas: Array<{ key: string; delta: number; latest: number; prev: number }> = [];//スコアの差分を入れるための空の配列を用意する。各要素は、スコアの項目名（key）、今回のスコアから前回のスコアを引いた値（delta）、今回のスコア（latest）、前回のスコア（prev）を持つオブジェクトになる。
 
-  for (const key of Object.keys(latestScores)) {//最新レビューのスコアの項目名（例：ux、ui、performanceなど）についてループする。keyには項目名が入る。
+  const scoreKeys = new Set([//重複なしで並べ替える
+    ...Object.keys(latestScores),
+    ...Object.keys(prevScores),
+  ]);
+
+  for (const key of scoreKeys) {//スコアの項目名（例：ux、ui、performanceなど）についてループする。keyには項目名が入る。
     const latest = latestScores[key] ?? 0;//最新レビューのスコアの項目の値をlatestに入れる。もしその項目がなければ0にする。
     const prev = prevScores[key] ?? 0;//前回レビューのスコアの項目の値をprevに入れる。もしその項目がなければ0にする。
     deltas.push({ key, delta: latest - prev, latest, prev });//deltas配列に、項目名（key）、今回のスコアから前回のスコアを引いた値（delta）、今回のスコア（latest）、前回のスコア（prev）を持つオブジェクトを追加する。

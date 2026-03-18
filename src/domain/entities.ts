@@ -39,3 +39,14 @@ export type Evaluation = {
   contentHtml: string;
   isLiked?: boolean; // ★ これを追加（任意項目にする）
 };
+
+
+
+// AiReviewのドメイン側のターゲット型
+export type ReviewTarget =
+  | { type: "person"; key: PersonSlug }
+  | { type: "top"; key?: never }
+  | { type: "likes"; key?: never }
+  | { type: "favorites"; key?: never };
+
+  

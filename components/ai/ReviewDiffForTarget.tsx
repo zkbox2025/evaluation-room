@@ -3,20 +3,20 @@
 import { getLatestTwoReviews } from "@/lib/aiReview/getLatestTwo";
 import { diffReview } from "@/lib/aiReview/diff";
 import { ReviewDiff } from "@/components/ai/ReviewDiff";
+import type { ReviewTarget,ViewerId  } from "@/domain/entities";
 
 export async function ReviewDiffForTarget(props: {
 //引数は以下の通り
-  viewerId: string;
-  targetType: "top" | "person" | "likes" | "favorites";
-  targetKey?: string | null;
+  viewerId: ViewerId;
+  target: ReviewTarget;
 }) {
-  const { viewerId, targetType, targetKey = null } = props;//引数から以上を抜き出す（targetKeyのデフォルトはnull：人物のみslugをつけてと親からの指定があるから）
+  const { viewerId, target } = props;//引数から以上を抜き出す（targetKeyのデフォルトはnull：人物のみslugをつけてと親からの指定があるから）
 
+  
   const { latest, prev } = await getLatestTwoReviews({//最新レビュー（成功のみ）を2件取ってくる関数を呼び出して取ってくる。
     //以下、引数
     viewerId,
-    targetType,
-    targetKey,
+    target,
     onlySuccess: true,
   });
 

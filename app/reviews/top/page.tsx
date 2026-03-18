@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/infrastructure/prisma/client";
 import { getOrCreateViewer } from "@/lib/viewer";
-import { extractReviewBits } from "@/lib/aiReview/ui";//AIレビュー結果（resultJson）から、画面で使いたい一部（summary,scores,issues先頭3件）だけ安全に抜き出す関数
+import { extractReviewBits } from "@/viewmodels/aiReview";//AIレビュー結果（resultJson）から、画面で使いたい一部（summary,scores,issues先頭3件）だけ安全に抜き出す関数
 import { RunAiReviewButton } from "@/components/ai/RunAiReviewButton";
 import { ReviewDiffForTarget } from "@/components/ai/ReviewDiffForTarget";//レビュー結果の差分(前後比較)を出す司令塔
 import { withReviewsSecret } from "@/lib/aiReview/secretLink"; // ★修正箇所はここ！
@@ -99,7 +99,7 @@ const { secret } = (await searchParams) ?? {}; // ★修正箇所はここ！
         {viewer && (
           <section className="mt-16">
             <h2 className="text-lg font-semibold mb-4">前回レビューとの差分</h2>
-            <ReviewDiffForTarget viewerId={viewer.id} targetType="top" />
+            <ReviewDiffForTarget viewerId={viewer.id} target={{ type: "top" }} />
           </section>
         )}
       </div>

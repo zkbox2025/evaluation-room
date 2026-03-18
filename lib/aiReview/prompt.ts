@@ -1,6 +1,6 @@
 // AIに渡す注文書
 import { PROMPT_VERSION, JSON_SCHEMA_VERSION } from "./versions";
-import type { ReviewTarget } from "./types";//AIレビューの対象（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）を指定するためのオブジェクト
+import type { ReviewTarget } from "@/domain/entities";//AIレビューの対象（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）を指定するためのオブジェクト
 import type { ReviewSnapshot } from "./snapshot";//AIレビューのスナップショット（トップレビュー、特定の人物の評価レビュー、いいね一覧レビュー、お気に入り一覧レビュー）をまとめた関数
 
 export function buildReviewPrompt(args: {//AIに渡す注文書を作る関数。引数は、AIレビューの対象（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）を指定するためのオブジェクトと、AIレビューのスナップショット（トップレビュー、特定の人物の評価レビュー、いいね一覧レビュー、お気に入り一覧レビュー）をまとめた関数を含むオブジェクト。
@@ -10,6 +10,8 @@ export function buildReviewPrompt(args: {//AIに渡す注文書を作る関数�
 }) {
   //引数からtargetとsnapshotを取り出す
   const { target, snapshot } = args;
+
+  const keyOrNull = target.type === "person" ? target.key : null;//typeがPersonの時だけtargetにkeyをつけてそれ以外はnull
 
   //注文書の共通部分（system：AIの「キャラクター設定」と「絶対ルール」とuser：具体的な依頼内容（データ））を作る
   const system = [//system：「キャラクター設定」と「絶対ルール」は以下の通り。
@@ -28,12 +30,12 @@ export function buildReviewPrompt(args: {//AIに渡す注文書を作る関数�
         promptVersion: PROMPT_VERSION,
         schemaVersion: JSON_SCHEMA_VERSION,
       },
-      target: { type: target.type, key: target.key ?? null },//レビューの対象を表すオブジェクト。typeはレビューの対象の種類（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）を表す文字列。keyはレビューの対象を特定するための追加情報（例えば、特定の人物のslugなど）。keyがない場合はnullになる。
+      //レビューの対象を表すオブジェクト。typeはレビューの対象の種類（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）を表す文字列。keyはレビューの対象を特定するための追加情報（例えば、特定の人物のslugなど）。keyがない場合はnullになる。
       snapshot,//AIに渡すオブジェクト。プロンプトよりも重要な部分。
       outputFormat: {//AIに出力してほしいJSONの形式を指定するオブジェクト。これをもとにAIはどのような形式でJSONを返せばいいかを判断することができる。
         promptVersion: PROMPT_VERSION,
         schemaVersion: JSON_SCHEMA_VERSION,
-        target: { type: target.type, key: target.key ?? null },
+        target: { type: target.type, key: keyOrNull },
         scores: {//レビューのスコアを表すオブジェクト。5つの項目があり、それぞれ0から10の整数で評価される。
           ux: 0,//ユーザーエクスペリエンスのスコア（ユーザー体験：使いやすさ）→（説明文が充実しているか）
           ui: 0,//ユーザーインターフェースのスコア（見た目や操作感）→（カテゴリー分けが適切か、偏りはないか）

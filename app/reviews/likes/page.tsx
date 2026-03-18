@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/infrastructure/prisma/client";
 import { getOrCreateViewer } from "@/lib/viewer";
-import { extractReviewBits } from "@/lib/aiReview/ui";//AIレビュー結果（resultJson）から、画面で使いたい一部（summary,scores,issues先頭3件）だけ安全に抜き出す関数
+import { extractReviewBits } from "@/viewmodels/aiReview";//AIレビュー結果（resultJson）から、画面で使いたい一部（summary,scores,issues先頭3件）だけ安全に抜き出す関数
 import { RunAiReviewButton } from "@/components/ai/RunAiReviewButton";
 import { withReviewsSecret } from "@/lib/aiReview/secretLink"; // ★修正箇所はここ！
 
