@@ -7,8 +7,6 @@ import EvaluationTimeline from "@/components/evaluation/EvaluationTimeline";//�
 import { prisma } from "@/infrastructure/prisma/client";//設計図(schema.prisma)を書き換える際に使うprismaClient（電話回線）がすでにあればそれを使い、なければ新しく作る関数を公開
 import { getOrCreateViewer } from "@/lib/viewer";//viewer（訪問者）を取得するか、新しく作成する関数をインポート
 import { FavoriteButton } from "@/components/person/FavoriteButton";//お気に入りボタンをインポート
-import { SaveDummyAiButton } from "@/components/ai/SaveDummyAiButton";
-import { getLatestAiGenerationForPerson } from "@/lib/aiGeneration";
 import { buildPersonReviewSnapshot } from "@/lib/aiReview/snapshot";
 import { getLatestAiReview } from "@/lib/aiReview/getLatest";
 import { ReviewDiffForTarget } from "@/components/ai/ReviewDiffForTarget";
@@ -50,10 +48,6 @@ export default async function PersonPage({ params }: Props) {//人物の詳細�
   ? await getLatestAiReview({ viewerId: viewer.id, target:{ type: "person", key: slug  } })
   : null;
 
-  const latestAiGeneration = viewer
-  ? await getLatestAiGenerationForPerson(viewer.id, slug)
-  : null;
-
   const userLikes = await prisma.like.findMany({//viewerIdを使って、その人が「いいね」した評価データのリストをデータベース(supabase)から取得（いいね済みの配列が入った評価ID（箱）を返す） 例）{ evaluationId: "id-1" }, { evaluationId: "id-2" },
     where: { viewerId: viewer.id },//viewerIdで絞り込み
     select: { evaluationId: true }, //評価IDという箱（配列入り）だけを取得
@@ -87,34 +81,7 @@ return (
     </div>
 
     <p className="mt-4 text-gray-600 leading-relaxed">{person.description}</p>
-    <SaveDummyAiButton personSlug={slug} />
     <EvaluationTimeline evaluations={evaluationsWithLikeStatus} />
-    {latestAiGeneration && (
-  <div className="mt-6 rounded-xl bg-white p-4 border border-gray-100">
-    <p className="text-xs text-gray-500">
-      前回のAI生成（{new Date(latestAiGeneration.createdAt).toLocaleString("ja-JP")}）
-    </p>
-
-    {latestAiGeneration.status === "success" ? (
-      <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">
-        {latestAiGeneration.resultText}
-      </p>
-    ) : (
-      <div className="mt-2">
-        <p className="text-sm text-red-600 font-medium">生成に失敗しました</p>
-        {latestAiGeneration.errorMessage && (
-          <p className="mt-1 text-xs text-gray-600 whitespace-pre-wrap">
-            {latestAiGeneration.errorMessage}
-          </p>
-        )}
-      </div>
-    )}
-
-    <p className="mt-2 text-xs text-gray-400">
-      model: {latestAiGeneration.model} / status: {latestAiGeneration.status}
-    </p>
-  </div>
-)}
 
 {latestReview && (
   <div className="mt-6 rounded-xl bg-white p-4 border border-gray-100">
