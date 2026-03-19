@@ -8,7 +8,6 @@ import { revalidatePath } from "next/cache";
 import type { ReviewTarget,Person } from "@/domain/entities";//AIレビューの対象（トップページ全体、特定の人物の評価、いいね一覧、お気に入り一覧）を指定するためのオブジェクト
 import type { ReviewSnapshot } from "@/lib/aiReview/snapshot";//AIレビューのスナップショット（トップレビュー、特定の人物の評価レビュー、いいね一覧レビュー、お気に入り一覧レビュー）をまとめた関数
 import { buildReviewPrompt } from "@/lib/aiReview/prompt";//AIに渡す注文書を作る関数。
-import { ReviewV1Schema } from "@/lib/aiReview/reviewSchema";////ユーザーのアクション（AIレビュー生成ボタンをクリック）によってサイトがサーバーにリクエストし、サーバーがAIに頼んだものがJSONとして返ってきたもの（不安定なデータ）を検品及び型定義して、アプリで使える安全な形に変換するためのファイル
 import { callLLMReview } from "@/lib/aiReview/callLLM";//AIに注文書(prompt)を送りレビュー結果を受け取るための「窓口（関数）」
 
 import {
@@ -132,7 +131,7 @@ export async function runAiReview(//フロントエンドからAIレビューの
 
     // 3) LLM呼び出し → JSON検証 → 保存（success）
     const llm = await callLLMReview({ system, user, model });//AIに注文書(prompt)を送りレビュー結果を受け取るための「窓口（関数）」を呼び出して、llmという変数に格納する。引数には、system（AIの「キャラクター設定」と「絶対ルール」）、user（具体的な依頼内容（データ）、model（使用するAIモデルの名前）が含まれる。これにより、AIに注文書を送ってレビュー結果を受け取ることができる。
-    const parsed = ReviewV1Schema.parse(llm.result);//サーバーがAIに頼んだ結果、JSONとして返ってきたもの（不安定なデータ）を検品及び型定義して、アプリで使える安全な形に変換するための関数を呼び出して、parsedという変数に格納する。引数には、llm.result（AIからのレビュー結果）が含まれる。これにより、AIからのレビュー結果を安全な形で扱うことができるようになる。形が正しければ parsed を返す。形が違えば例外を投げる（catch (err: unknown)：エラーでも保存に行く）
+  
 
     //prismaを使って、AIレビューの結果をDBに保存する。これにより、AIレビューの結果を後で参照したり分析したりすることができるようになる。
     await saveAiReview({
@@ -141,16 +140,18 @@ export async function runAiReview(//フロントエンドからAIレビューの
     snapshot,
     model,
     status: "success",
-    resultJson: parsed,
+    resultJson: llm.result,
     tokensInput: llm.tokensInput ?? null,
     tokensOutput: llm.tokensOutput ?? null,
     costUsdMicro: llm.costUsdMicro ?? null, 
     });
 
+
     revalidatePath(pathToRevalidate);//Next.jsのキャッシュを更新して、ページを再描画させる。これにより、Next.jsのキャッシュを更新して、ページを再描画させる
     
     return { ok: true };//AIレビューの実行が成功したことを示すRunAiReviewResultを返す。フロントエンドはこの結果を受け取って、ユーザーに成功のメッセージを表示したり、AIレビューの結果を画面に反映させたりすることができる。
   
+
     //もし１分以内に3回より多くAIレビューボタンを押した場合、APIの使いすぎ（RateLimitError）が発生した場合、データベース（saveAiReview）に「レート制限によるエラー」として記録し、ユーザーにエラーメッセージを返す
     } catch (err: unknown) {
   if (err instanceof RateLimitError) {
