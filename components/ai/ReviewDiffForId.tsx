@@ -1,4 +1,4 @@
-//components/ai/ReviewDiffForId.server.tsx
+//components/ai/ReviewDiffForId.tsx
 //特定のレビューIDから、その比較対象となる『カテゴリ』を特定して差分表示へ橋渡しするコンポーネント
 import { prisma } from "@/infrastructure/prisma/client";
 import { ReviewDiffForTarget } from "@/components/ai/ReviewDiffForTarget";
