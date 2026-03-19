@@ -7,7 +7,6 @@ import EvaluationTimeline from "@/components/evaluation/EvaluationTimeline";//�
 import { prisma } from "@/infrastructure/prisma/client";//設計図(schema.prisma)を書き換える際に使うprismaClient（電話回線）がすでにあればそれを使い、なければ新しく作る関数を公開
 import { getOrCreateViewer } from "@/lib/viewer";//viewer（訪問者）を取得するか、新しく作成する関数をインポート
 import { FavoriteButton } from "@/components/person/FavoriteButton";//お気に入りボタンをインポート
-import { buildPersonReviewSnapshot } from "@/lib/aiReview/snapshot";
 import { getLatestAiReview } from "@/lib/aiReview/getLatest";
 import { ReviewDiffForTarget } from "@/components/ai/ReviewDiffForTarget";
 
@@ -24,16 +23,6 @@ export default async function PersonPage({ params }: Props) {//人物の詳細�
 
   if (!person) return <p>人物が見つかりません</p>;//personがnull/undefinedなら表示して終了
 
-  const snapshot = buildPersonReviewSnapshot({
-  person,
-  evaluations,
-  takeLatest: 5,
-});
-
-  // ★ここに追加（snapshot作成直後）
-  if (process.env.NODE_ENV === "development") {
-    console.log("[snapshot]", snapshot);
-  }
 
   // 2. ★ deviceIDを使ってviewerオブジェクト（viewerID入り）を取得し閲覧者を特定する関数を呼び出す（なければ新規で作る）
   const viewer = await getOrCreateViewer();
