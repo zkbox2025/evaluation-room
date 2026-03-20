@@ -81,9 +81,6 @@ export async function callLLMReview(args: {
 }> {
   if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not set");//APIキーがなければ失敗させる
 
-console.log("[env]", process.env.VERCEL_ENV, process.env.NODE_ENV);
-console.log("[key]", (process.env.OPENAI_API_KEY ?? "").slice(0, 7), "...", (process.env.OPENAI_API_KEY ?? "").slice(-4));
-
   const resp = await client.responses.create({//OpenAIに以下を送信し、返事が来たら次の行に進む
     model: args.model,
     input: [
