@@ -125,6 +125,7 @@ export async function runAiReview(//フロントエンドからAIレビューの
     } else {
       throw new Error("snapshot builder not implemented for target");
     }
+    
 
     // 2) prompt生成
     const { system, user } = buildReviewPrompt({ target, snapshot });//AIに渡す注文書を作る関数を呼び出して、systemとuserという変数に格納する。引数には、target（AIレビューの対象）とsnapshot（AIレビューのスナップショット）が含まれる。これにより、AIに渡す注文書を生成するための情報が準備される。
@@ -132,6 +133,7 @@ export async function runAiReview(//フロントエンドからAIレビューの
     // 3) LLM呼び出し → JSON検証 → 保存（success）
     const llm = await callLLMReview({ system, user, model });//AIに注文書(prompt)を送りレビュー結果を受け取るための「窓口（関数）」を呼び出して、llmという変数に格納する。引数には、system（AIの「キャラクター設定」と「絶対ルール」）、user（具体的な依頼内容（データ）、model（使用するAIモデルの名前）が含まれる。これにより、AIに注文書を送ってレビュー結果を受け取ることができる。
   
+    
 
     //prismaを使って、AIレビューの結果をDBに保存する。これにより、AIレビューの結果を後で参照したり分析したりすることができるようになる。
     await saveAiReview({

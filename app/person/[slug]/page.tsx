@@ -7,8 +7,7 @@ import EvaluationTimeline from "@/components/evaluation/EvaluationTimeline";//�
 import { prisma } from "@/infrastructure/prisma/client";//設計図(schema.prisma)を書き換える際に使うprismaClient（電話回線）がすでにあればそれを使い、なければ新しく作る関数を公開
 import { getOrCreateViewer } from "@/lib/viewer";//viewer（訪問者）を取得するか、新しく作成する関数をインポート
 import { FavoriteButton } from "@/components/person/FavoriteButton";//お気に入りボタンをインポート
-import { getLatestAiReview } from "@/lib/aiReview/getLatest";
-import { ReviewDiffForTarget } from "@/components/ai/ReviewDiffForTarget";
+
 
 type Props = {//ページコンポーネントのプロパティの型を定義する
   params: Promise<{ slug: string }>;//このページはURLにslugを持つルート（例 /person/tanaka（←params））で、slugを使って人物を特定する
@@ -32,10 +31,6 @@ export default async function PersonPage({ params }: Props) {//人物の詳細�
   return <p>読み込み中、またはCookieを有効にしてください。</p>;
   }
 
-
-  const latestReview = viewer
-  ? await getLatestAiReview({ viewerId: viewer.id, target:{ type: "person", key: slug  } })
-  : null;
 
   const userLikes = await prisma.like.findMany({//viewerIdを使って、その人が「いいね」した評価データのリストをデータベース(supabase)から取得（いいね済みの配列が入った評価ID（箱）を返す） 例）{ evaluationId: "id-1" }, { evaluationId: "id-2" },
     where: { viewerId: viewer.id },//viewerIdで絞り込み
@@ -72,38 +67,6 @@ return (
     <p className="mt-4 text-gray-600 leading-relaxed">{person.description}</p>
     <EvaluationTimeline evaluations={evaluationsWithLikeStatus} />
 
-{latestReview && (
-  <div className="mt-6 rounded-xl bg-white p-4 border border-gray-100">
-    <p className="text-xs text-gray-500">
-      前回レビュー（
-      {new Date(latestReview.createdAt).toLocaleString("ja-JP")} /{" "}
-      {latestReview.status}
-      ）
-    </p>
-
-    {latestReview.status === "error" ? (
-      <p className="mt-2 text-sm text-red-600 whitespace-pre-wrap">
-        {latestReview.errorMessage}
-      </p>
-    ) : (
-      <pre className="mt-2 text-xs text-gray-700 whitespace-pre-wrap">
-        {JSON.stringify(latestReview.resultJson, null, 2)}
-      </pre>
-      
-    )}
-    
-  </div>
-)}
-
-{viewer && (
-  <section className="mt-16">
-    <h2 className="text-lg font-semibold mb-4">前回レビューとの差分</h2>
-    <ReviewDiffForTarget
-     viewerId={viewer.id}
-     target={{ type: "person", key: slug  }}
-    />
-  </section>
-)}
     <Link className="inline-block mt-10 text-blue-600 underline" href="/">
         トップへ戻る
       </Link>
