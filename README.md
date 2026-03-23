@@ -67,6 +67,10 @@ npm run dev
 - 識別：middlewareでdeviceId cookie発行 → ViewerとしてDB管理  
 - AIレビュー：snapshot→prompt→LLM(JSON schema)→Zod検証→DB保存、履歴/差分/ガード込み
 
+## Screenshot
+
+![トップページ](docs/images/top-page.png)
+
 
 詳細はこちら
 
