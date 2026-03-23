@@ -1,5 +1,7 @@
 # 評価の部屋（Evaluation Room）
 
+本番URL: https://evaluation-room.vercel.app
+
 著名人に対する「ポジティブな評価」を集めて閲覧できる Web アプリです。  
 管理者が microCMS でコンテンツ（人物/評価）を更新し、閲覧者は Like / Favorite を付けたり、開発者向けに AIレビュー（UI/UX診断）の履歴・差分を確認できます。
 
@@ -70,6 +72,7 @@ npm run dev
 
 ## Docs
 
-- [運用メモ（Webhook / Health / migrate）](./docs/ops.md)
-- [設計・学習メモ](./docs/design-notes.md)
-- [失敗ログ / Troubleshooting](./docs/troubleshooting.md)
+[運用メモ（Webhook / Health / migrate）](./docs/ops.md)  
+[設計・学習メモ](./docs/design-notes.md)  
+[失敗ログ / Troubleshooting](./docs/troubleshooting.md)
+
